@@ -98,7 +98,7 @@ function wrapRequestWithResponseInterceptor(): void {
         return
       }
 
-      // 业务错误码处理
+      // 统一响应解包: { code: 0, data: T } → T
       const body = res.data as ApiResponse
       if (body && typeof body === 'object' && 'code' in body) {
         if (body.code !== 0) {
@@ -107,6 +107,8 @@ function wrapRequestWithResponseInterceptor(): void {
           originalFail?.call(this, { errMsg: body.message } as any)
           return
         }
+        // code === 0 成功: 解包 data 字段，让调用方直接拿到业务数据
+        res.data = body.data
       }
 
       originalSuccess?.call(this, res)

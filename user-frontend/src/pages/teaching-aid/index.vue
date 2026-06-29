@@ -24,6 +24,7 @@ function handleTabChange(path: string): void {
 
 onShow(() => {
   const userStore = useUserStore()
+  userStore.restoreSession()
   if (!userStore.isLoggedIn) {
     uni.reLaunch({ url: '/pages/login/index' })
   }

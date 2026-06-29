@@ -317,7 +317,8 @@ onMounted(() => {
 })
 
 onShow(() => {
-  // tabBar 页面切换时检查登录状态
+  // 先从 storage 恢复登录态（支持登录页绕过 store 写入 token 的场景）
+  userStore.restoreSession()
   if (!userStore.isLoggedIn) {
     uni.reLaunch({ url: '/pages/login/index' })
   }

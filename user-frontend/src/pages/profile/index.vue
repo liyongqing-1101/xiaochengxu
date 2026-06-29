@@ -163,6 +163,7 @@ onMounted(() => {
 })
 
 onShow(() => {
+  userStore.restoreSession()
   if (!userStore.isLoggedIn) {
     uni.reLaunch({ url: '/pages/login/index' })
   }

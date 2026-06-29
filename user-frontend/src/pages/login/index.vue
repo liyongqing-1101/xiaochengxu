@@ -1,7 +1,10 @@
 <template>
   <!--
-    登录页面
-    支持: 账号密码登录 + 微信一键登录
+    登录页面 — 账号密码登录 + 微信登录
+
+    【关键】绕过 Pinia store 直接调用 authApi，原因同注册页：
+    微信小程序环境中 useUserStore() 可能返回 undefined。
+    登录成功后手动写入 storage，tabBar 页 onShow 会 restoreSession 恢复状态。
   -->
   <view class="login-page">
     <!-- 装饰背景 -->
@@ -47,6 +50,7 @@
             class="login-form__input"
             placeholder="请输入用户名"
             placeholder-style="color: #C0C4CC"
+            :disabled="loggingIn"
           />
         </view>
         <view class="login-form__item">
@@ -54,12 +58,13 @@
           <input
             v-model="password"
             class="login-form__input"
-            :type="showPassword ? 'text' : 'password'"
+            :type="showPwd ? 'text' : 'password'"
             placeholder="请输入密码"
             placeholder-style="color: #C0C4CC"
+            :disabled="loggingIn"
           />
-          <text class="login-form__toggle" @tap="showPassword = !showPassword">
-            {{ showPassword ? '🙈' : '👁️' }}
+          <text class="login-form__toggle" @tap="showPwd = !showPwd">
+            {{ showPwd ? '🙈' : '👁️' }}
           </text>
         </view>
 
@@ -110,18 +115,46 @@
 </template>
 
 <script setup lang="ts">
+/**
+ * 登录页面 — 逻辑层
+ *
+ * ========== 架构决策 ==========
+ * 绕过 Pinia store，直接调用 authApi + 手动写 storage。
+ * 原因：微信小程序 UniApp 环境中 useUserStore() 可能返回 undefined。
+ * 登录成功后 tabBar 页面 onShow 会调用 restoreSession() 从 storage 恢复状态。
+ *
+ * ========== 调试日志 ==========
+ * [Login] === 开始登录 ===
+ * [Login] 请求参数: { username, password: "***" }
+ * [Login] 后端响应: { token: "eyJ...", userInfo: {...} }
+ * [Login] ✅ 登录成功，跳转首页
+ */
 import { ref } from 'vue'
-import { useUserStore } from '@/stores/user'
+import { authApi } from '@/api/modules/auth'
+import { storage } from '@/utils/storage'
+import { StorageKey } from '@/utils/constants'
+import type { LoginResult } from '@/types/user'
 
+// ═══════════════════════════════════════
+// 表单
+// ═══════════════════════════════════════
 const loginMode = ref<'account' | 'wechat'>('account')
-const username = ref('')
-const password = ref('')
-const showPassword = ref(false)
-const loggingIn = ref(false)
+const username = ref<string>('')
+const password = ref<string>('')
+const showPwd = ref<boolean>(false)
+const loggingIn = ref<boolean>(false)
 
-/** 账号密码登录 */
+// ═══════════════════════════════════════
+// 账号密码登录
+// ═══════════════════════════════════════
 async function handleAccountLogin(): Promise<void> {
-  const userStore = useUserStore()
+  // 防重复点击
+  if (loggingIn.value) {
+    console.log('[Login] 重复点击已拦截')
+    return
+  }
+
+  // 前端校验
   if (!username.value.trim()) {
     uni.showToast({ title: '请输入用户名', icon: 'none' })
     return
@@ -131,42 +164,84 @@ async function handleAccountLogin(): Promise<void> {
     return
   }
 
+  console.log('[Login] === 开始登录 ===')
+  console.log('[Login] 请求参数:', {
+    username: username.value.trim(),
+    password: '***',
+  })
+
   loggingIn.value = true
+
   try {
-    await userStore.loginByPassword(username.value.trim(), password.value)
+    // 直接调用 authApi，不经过 Pinia store
+    // 拦截器已修复：响应 { code:0, data:{token,userInfo} } 自动解包为 { token, userInfo }
+    const result: LoginResult = await authApi.loginByUsername(
+      username.value.trim(),
+      password.value,
+    )
+
+    console.log('[Login] 后端响应:', {
+      token: result.token ? `${result.token.substring(0, 20)}...` : 'MISSING',
+      userInfo: result.userInfo,
+    })
+
+    // 手动写入 storage（替代 store 的持久化）
+    storage.set(StorageKey.TOKEN, result.token)
+    storage.set(StorageKey.USER_INFO, result.userInfo)
+
+    console.log('[Login] ✅ 登录成功，跳转首页')
+
+    // 跳转首页（index 页 onShow 会 restoreSession 恢复 store 状态）
     uni.reLaunch({ url: '/pages/index/index' })
-  } catch {
-    // 业务错误已由拦截器显示 toast，此处不再重复提示
+  } catch (e: unknown) {
+    // 后端业务错误（用户名/密码错误等）已由拦截器 handleBusinessError 弹 toast
+    // 这里只兜底网络异常
+    const err = e as Record<string, unknown>
+    console.error('[Login] ❌ 登录失败:', err)
+
+    if (err?.errMsg && typeof err.errMsg === 'string') {
+      if (err.errMsg.includes('request:fail') || err.errMsg.includes('timeout')) {
+        uni.showToast({ title: '网络异常，请检查网络连接', icon: 'none' })
+      }
+    } else if (err?.message && typeof err.message === 'string') {
+      uni.showToast({ title: err.message, icon: 'none' })
+    }
   } finally {
     loggingIn.value = false
+    console.log('[Login] === 登录流程结束 ===')
   }
 }
 
-/** 微信登录 */
+// ═══════════════════════════════════════
+// 微信登录（开发环境暂不可用）
+// ═══════════════════════════════════════
 async function handleWechatLogin(): Promise<void> {
-  const userStore = useUserStore()
-  loggingIn.value = true
-  try {
-    await userStore.login()
-    uni.reLaunch({ url: '/pages/index/index' })
-  } catch {
-    // 错误已在 store 中处理
-  } finally {
-    loggingIn.value = false
-  }
+  uni.showToast({ title: '微信登录需在真机测试', icon: 'none' })
 }
 
-/** 跳转注册页 */
+// ═══════════════════════════════════════
+// 辅助
+// ═══════════════════════════════════════
 function handleGoRegister(): void {
   uni.navigateTo({ url: '/pages/register/index' })
 }
 
 function handlePrivacy(): void {
-  uni.showToast({ title: '隐私政策', icon: 'none' })
+  uni.showModal({
+    title: '隐私政策',
+    content: '我们将严格遵守相关法律法规，保护您的个人信息安全。',
+    showCancel: false,
+    confirmText: '我知道了',
+  })
 }
 
 function handleAgreement(): void {
-  uni.showToast({ title: '用户协议', icon: 'none' })
+  uni.showModal({
+    title: '用户协议',
+    content: '使用本小程序即表示同意用户协议。',
+    showCancel: false,
+    confirmText: '我知道了',
+  })
 }
 </script>
 
