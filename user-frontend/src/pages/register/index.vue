@@ -121,8 +121,7 @@ async function handleRegister(): Promise<void> {
       uni.navigateBack()
     }, 1000)
   } catch (e: any) {
-    const msg = e?.data?.message || e?.message || '注册失败'
-    uni.showToast({ title: msg, icon: 'none' })
+    // 业务错误已由拦截器显示 toast，此处不再重复提示
   } finally {
     registering.value = false
   }

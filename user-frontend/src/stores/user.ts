@@ -13,6 +13,8 @@ import { ref, computed } from 'vue'
 import type { UserInfo, UserStats, LoginResult } from '@/types/user'
 import { storage } from '@/utils/storage'
 import { StorageKey } from '@/utils/constants'
+import { authApi } from '@/api/modules/auth'
+import { get, post, put } from '@/utils/request'
 
 export const useUserStore = defineStore('user', () => {
   // ═══════════════════════════════════════
@@ -62,8 +64,6 @@ export const useUserStore = defineStore('user', () => {
         provider: 'weixin',
         success: async (loginRes) => {
           try {
-            // 调用后端 JWT 登录接口
-            const { post } = await import('@/utils/request')
             const result = await post<LoginResult>('/auth/login', {
               code: loginRes.code,
             })
@@ -94,7 +94,6 @@ export const useUserStore = defineStore('user', () => {
    * 用户名密码登录
    */
   async function loginByPassword(username: string, password: string): Promise<void> {
-    const { authApi } = await import('@/api/modules/auth')
     const result = await authApi.loginByUsername(username, password)
 
     token.value = result.token
@@ -109,7 +108,6 @@ export const useUserStore = defineStore('user', () => {
    * 用户注册
    */
   async function register(username: string, password: string, confirmPassword: string): Promise<void> {
-    const { authApi } = await import('@/api/modules/auth')
     await authApi.register(username, password, confirmPassword)
   }
 
@@ -118,7 +116,6 @@ export const useUserStore = defineStore('user', () => {
    */
   async function fetchUserInfo(): Promise<void> {
     try {
-      const { get } = await import('@/utils/request')
       const info = await get<UserInfo>('/user/info')
       userInfo.value = info
       storage.set(StorageKey.USER_INFO, info)
@@ -132,7 +129,6 @@ export const useUserStore = defineStore('user', () => {
    */
   async function fetchStats(): Promise<void> {
     try {
-      const { get } = await import('@/utils/request')
       const examStore = (await import('./exam')).useExamStore()
       const data = await get<UserStats>('/user/stats', {
         categoryId: examStore.currentCategoryId,
@@ -148,7 +144,6 @@ export const useUserStore = defineStore('user', () => {
    */
   async function checkIn(): Promise<boolean> {
     try {
-      const { post } = await import('@/utils/request')
       await post('/user/check-in')
       // 刷新统计数据
       await fetchStats()
@@ -177,7 +172,6 @@ export const useUserStore = defineStore('user', () => {
    */
   async function updateProfile(data: Partial<Pick<UserInfo, 'nickname' | 'avatar'>>): Promise<void> {
     try {
-      const { put } = await import('@/utils/request')
       await put('/user/info', data)
       if (userInfo.value) {
         Object.assign(userInfo.value, data)
