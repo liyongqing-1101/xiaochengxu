@@ -92,16 +92,45 @@ export const useUserStore = defineStore('user', () => {
 
   /**
    * 用户名密码登录
+   *
+   * 流程: 调用 API → 校验响应数据 → 写入 state → 持久化 storage
    */
   async function loginByPassword(username: string, password: string): Promise<void> {
+    // 参数校验
+    if (!username || !password) {
+      throw new Error('用户名和密码不能为空')
+    }
+
+    console.log('[Store] loginByPassword 请求:', { username, password: '***' })
+
+    // 调用 API（拦截器已解包 {code,data} → 直接返回 data 对象）
     const result = await authApi.loginByUsername(username, password)
 
+    console.log('[Store] loginByPassword 后端返回:', {
+      hasToken: !!result?.token,
+      tokenPrefix: result?.token ? result.token.substring(0, 20) + '...' : 'MISSING',
+      hasUserInfo: !!result?.userInfo,
+      hasRefreshToken: !!result?.refreshToken,
+    })
+
+    // 数据完整性校验
+    if (!result || !result.token || !result.userInfo) {
+      console.error('[Store] loginByPassword 响应数据不完整:', result)
+      throw new Error('登录返回数据异常，请重试')
+    }
+
+    // 写入 Pinia state
     token.value = result.token
     userInfo.value = result.userInfo
 
-    // 持久化
+    // 持久化到本地缓存
     storage.set(StorageKey.TOKEN, result.token)
     storage.set(StorageKey.USER_INFO, result.userInfo)
+    if (result.refreshToken) {
+      storage.set(StorageKey.REFRESH_TOKEN, result.refreshToken)
+    }
+
+    console.log('[Store] loginByPassword ✅ 登录态已保存')
   }
 
   /**

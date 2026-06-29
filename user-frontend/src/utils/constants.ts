@@ -30,6 +30,8 @@ export const STORAGE_PREFIX = 'wxjz:'
 export enum StorageKey {
   /** JWT Token */
   TOKEN = 'auth:token',
+  /** 刷新 Token */
+  REFRESH_TOKEN = 'auth:refresh_token',
   /** 用户信息 */
   USER_INFO = 'auth:user_info',
   /** 当前考试分类ID */

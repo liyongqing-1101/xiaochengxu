@@ -2,21 +2,21 @@
   <!--
     登录页面 — 账号密码登录 + 微信登录
 
-    【关键】绕过 Pinia store 直接调用 authApi，原因同注册页：
-    微信小程序环境中 useUserStore() 可能返回 undefined。
-    登录成功后手动写入 storage，tabBar 页 onShow 会 restoreSession 恢复状态。
+    数据流:
+      handleAccountLogin()
+        → useUserStore() 可用? → userStore.loginByPassword()
+        → useUserStore() undefined? → authApi.loginByUsername() + 手动写 storage
+        → 成功 toast → 延时跳转首页
+        → tabBar 页 onShow restoreSession 恢复登录态
   -->
   <view class="login-page">
-    <!-- 装饰背景 -->
     <view class="login-bg">
       <view class="login-bg__circle login-bg__circle--1" />
       <view class="login-bg__circle login-bg__circle--2" />
       <view class="login-bg__circle login-bg__circle--3" />
     </view>
 
-    <!-- 内容区 -->
     <view class="login-content">
-      <!-- Logo 区域 -->
       <view class="login-logo">
         <text class="login-logo__icon">📚</text>
         <text class="login-logo__title">高校教资题库</text>
@@ -29,19 +29,15 @@
           class="login-tabs__item"
           :class="{ 'login-tabs__item--active': loginMode === 'account' }"
           @tap="loginMode = 'account'"
-        >
-          <text>账号登录</text>
-        </view>
+        ><text>账号登录</text></view>
         <view
           class="login-tabs__item"
           :class="{ 'login-tabs__item--active': loginMode === 'wechat' }"
           @tap="loginMode = 'wechat'"
-        >
-          <text>微信登录</text>
-        </view>
+        ><text>微信登录</text></view>
       </view>
 
-      <!-- ===== 账号密码登录表单 ===== -->
+      <!-- 账号密码登录 -->
       <view v-if="loginMode === 'account'" class="login-form">
         <view class="login-form__item">
           <text class="login-form__icon">👤</text>
@@ -82,11 +78,9 @@
         </view>
       </view>
 
-      <!-- ===== 微信登录 ===== -->
+      <!-- 微信登录 -->
       <view v-else class="login-wechat">
-        <view class="login-wechat__desc">
-          <text>授权微信账号快速登录</text>
-        </view>
+        <view class="login-wechat__desc"><text>授权微信账号快速登录</text></view>
         <view
           class="login-wechat__btn"
           :class="{ 'login-wechat__btn--loading': loggingIn }"
@@ -101,7 +95,6 @@
         </view>
       </view>
 
-      <!-- 协议 -->
       <view class="login-agreement">
         <text class="login-agreement__text">
           登录即表示同意
@@ -118,18 +111,20 @@
 /**
  * 登录页面 — 逻辑层
  *
- * ========== 架构决策 ==========
- * 绕过 Pinia store，直接调用 authApi + 手动写 storage。
- * 原因：微信小程序 UniApp 环境中 useUserStore() 可能返回 undefined。
- * 登录成功后 tabBar 页面 onShow 会调用 restoreSession() 从 storage 恢复状态。
+ * ========== 双路径策略 ==========
+ * 路径A: useUserStore() 可用 → store.loginByPassword()（写入 state + storage）
+ * 路径B: useUserStore() undefined → authApi 直调 + 手动 storage.set
+ *
+ * 微信小程序 UniApp 中 Pinia 可能未就绪，两条路径确保登录不阻塞。
  *
  * ========== 调试日志 ==========
  * [Login] === 开始登录 ===
- * [Login] 请求参数: { username, password: "***" }
- * [Login] 后端响应: { token: "eyJ...", userInfo: {...} }
- * [Login] ✅ 登录成功，跳转首页
+ * [Login] store 状态: available / fallback
+ * [Login] 后端返回: { token: "eyJ...", userInfo: {...} }
+ * [Login] ✅ 登录成功 → 跳转首页
  */
 import { ref } from 'vue'
+import { useUserStore } from '@/stores/user'
 import { authApi } from '@/api/modules/auth'
 import { storage } from '@/utils/storage'
 import { StorageKey } from '@/utils/constants'
@@ -148,63 +143,96 @@ const loggingIn = ref<boolean>(false)
 // 账号密码登录
 // ═══════════════════════════════════════
 async function handleAccountLogin(): Promise<void> {
-  // 防重复点击
+  // ── 防重复点击 ──
   if (loggingIn.value) {
     console.log('[Login] 重复点击已拦截')
     return
   }
 
-  // 前端校验
-  if (!username.value.trim()) {
-    uni.showToast({ title: '请输入用户名', icon: 'none' })
+  // ── 参数非空校验 ──
+  const name = username.value.trim()
+  const pwd = password.value
+  if (!name) {
+    uni.showToast({ title: '请输入用户名', icon: 'none', duration: 2000 })
     return
   }
-  if (!password.value) {
-    uni.showToast({ title: '请输入密码', icon: 'none' })
+  if (!pwd) {
+    uni.showToast({ title: '请输入密码', icon: 'none', duration: 2000 })
     return
   }
 
   console.log('[Login] === 开始登录 ===')
-  console.log('[Login] 请求参数:', {
-    username: username.value.trim(),
-    password: '***',
-  })
+  console.log('[Login] 请求参数:', { username: name, password: '***' })
 
   loggingIn.value = true
 
   try {
-    // 直接调用 authApi，不经过 Pinia store
-    // 拦截器已修复：响应 { code:0, data:{token,userInfo} } 自动解包为 { token, userInfo }
-    const result: LoginResult = await authApi.loginByUsername(
-      username.value.trim(),
-      password.value,
-    )
+    // ── 双路径：优先 store，兜底直调 API ──
+    const userStore = useUserStore()
+    console.log('[Login] store 状态:', userStore ? 'available' : 'undefined (fallback)')
 
-    console.log('[Login] 后端响应:', {
-      token: result.token ? `${result.token.substring(0, 20)}...` : 'MISSING',
+    let result: LoginResult
+
+    if (userStore) {
+      // 路径A: 走 Pinia store（自动写 state + storage）
+      console.log('[Login] 路径A: store.loginByPassword()')
+      await userStore.loginByPassword(name, pwd)
+
+      // store 已保存，读取用于日志
+      result = {
+        token: userStore.token || '',
+        userInfo: userStore.userInfo!,
+      }
+    } else {
+      // 路径B: 直调 API + 手动写 storage
+      console.log('[Login] 路径B: authApi.loginByUsername() + 手动 storage')
+      result = await authApi.loginByUsername(name, pwd)
+
+      // 数据完整性校验
+      if (!result || !result.token || !result.userInfo) {
+        console.error('[Login] 响应数据不完整:', result)
+        throw new Error('登录返回数据异常，请重试')
+      }
+
+      // 手动持久化
+      storage.set(StorageKey.TOKEN, result.token)
+      storage.set(StorageKey.USER_INFO, result.userInfo)
+      if (result.refreshToken) {
+        storage.set(StorageKey.REFRESH_TOKEN, result.refreshToken)
+      }
+      console.log('[Login] storage 已写入')
+    }
+
+    console.log('[Login] 后端返回:', {
+      token: result.token ? result.token.substring(0, 20) + '...' : 'MISSING',
       userInfo: result.userInfo,
     })
 
-    // 手动写入 storage（替代 store 的持久化）
-    storage.set(StorageKey.TOKEN, result.token)
-    storage.set(StorageKey.USER_INFO, result.userInfo)
+    // ── 成功 ──
+    uni.showToast({ title: '登录成功', icon: 'success', duration: 1000 })
+    console.log('[Login] ✅ 登录成功 → 跳转首页')
 
-    console.log('[Login] ✅ 登录成功，跳转首页')
-
-    // 跳转首页（index 页 onShow 会 restoreSession 恢复 store 状态）
-    uni.reLaunch({ url: '/pages/index/index' })
+    // 延时跳转，让用户看到 toast
+    setTimeout(() => {
+      uni.reLaunch({ url: '/pages/index/index' })
+    }, 1000)
   } catch (e: unknown) {
-    // 后端业务错误（用户名/密码错误等）已由拦截器 handleBusinessError 弹 toast
-    // 这里只兜底网络异常
     const err = e as Record<string, unknown>
     console.error('[Login] ❌ 登录失败:', err)
 
-    if (err?.errMsg && typeof err.errMsg === 'string') {
-      if (err.errMsg.includes('request:fail') || err.errMsg.includes('timeout')) {
+    // 后端业务错误（用户名/密码错误）已由拦截器 handleBusinessError 弹 toast
+    // 这里兜底网络异常 + 数据解析异常
+    const errMsg = err?.errMsg as string | undefined
+    const message = err?.message as string | undefined
+
+    if (errMsg) {
+      if (errMsg.includes('request:fail') || errMsg.includes('timeout')) {
         uni.showToast({ title: '网络异常，请检查网络连接', icon: 'none' })
       }
-    } else if (err?.message && typeof err.message === 'string') {
-      uni.showToast({ title: err.message, icon: 'none' })
+      // 其他 errMsg：拦截器已处理，不重复弹窗
+    } else if (message) {
+      // 数据解析异常等未经过拦截器的错误
+      uni.showToast({ title: message, icon: 'none' })
     }
   } finally {
     loggingIn.value = false
@@ -253,13 +281,9 @@ function handleAgreement(): void {
   overflow: hidden;
 }
 
-// 装饰背景
 .login-bg {
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  top: 0; left: 0; right: 0; bottom: 0;
   pointer-events: none;
 
   &__circle {
@@ -268,62 +292,38 @@ function handleAgreement(): void {
     opacity: 0.06;
 
     &--1 {
-      width: 500rpx;
-      height: 500rpx;
+      width: 500rpx; height: 500rpx;
       background: #4A90D9;
-      top: -150rpx;
-      right: -180rpx;
+      top: -150rpx; right: -180rpx;
     }
-
     &--2 {
-      width: 300rpx;
-      height: 300rpx;
+      width: 300rpx; height: 300rpx;
       background: #52C41A;
-      bottom: 200rpx;
-      left: -120rpx;
+      bottom: 200rpx; left: -120rpx;
     }
-
     &--3 {
-      width: 200rpx;
-      height: 200rpx;
+      width: 200rpx; height: 200rpx;
       background: #FAAD14;
-      top: 400rpx;
-      right: -60rpx;
+      top: 400rpx; right: -60rpx;
     }
   }
 }
 
-// 内容区
 .login-content {
   position: relative;
   z-index: 1;
   padding: 160rpx $spacing-xl $spacing-xxl;
 }
 
-// Logo
 .login-logo {
   @include flex-column-center;
   margin-bottom: 60rpx;
 
-  &__icon {
-    font-size: 80rpx;
-    margin-bottom: $spacing-md;
-  }
-
-  &__title {
-    font-size: 40rpx;
-    font-weight: $font-weight-bold;
-    color: $color-text-primary;
-    margin-bottom: $spacing-xs;
-  }
-
-  &__slogan {
-    font-size: $font-size-sm;
-    color: $color-text-placeholder;
-  }
+  &__icon { font-size: 80rpx; margin-bottom: $spacing-md; }
+  &__title { font-size: 40rpx; font-weight: $font-weight-bold; color: $color-text-primary; margin-bottom: $spacing-xs; }
+  &__slogan { font-size: $font-size-sm; color: $color-text-placeholder; }
 }
 
-// 切换 Tab
 .login-tabs {
   @include flex-center;
   background: rgba(255, 255, 255, 0.7);
@@ -339,24 +339,15 @@ function handleAgreement(): void {
   border-radius: $radius-xl;
   transition: all 0.3s;
 
-  text {
-    font-size: $font-size-base;
-    color: $color-text-secondary;
-    font-weight: $font-weight-medium;
-  }
+  text { font-size: $font-size-base; color: $color-text-secondary; font-weight: $font-weight-medium; }
 
   &--active {
     background: #fff;
     box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.08);
-
-    text {
-      color: $color-primary;
-      font-weight: $font-weight-semibold;
-    }
+    text { color: $color-primary; font-weight: $font-weight-semibold; }
   }
 }
 
-// 表单
 .login-form {
   &__item {
     @include flex-start;
@@ -367,23 +358,9 @@ function handleAgreement(): void {
     box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.04);
     gap: $spacing-sm;
   }
-
-  &__icon {
-    font-size: $font-size-lg;
-    flex-shrink: 0;
-  }
-
-  &__input {
-    flex: 1;
-    font-size: $font-size-base;
-    color: $color-text-primary;
-  }
-
-  &__toggle {
-    font-size: $font-size-lg;
-    padding: $spacing-xs;
-    flex-shrink: 0;
-  }
+  &__icon { font-size: $font-size-lg; flex-shrink: 0; }
+  &__input { flex: 1; font-size: $font-size-base; color: $color-text-primary; }
+  &__toggle { font-size: $font-size-lg; padding: $spacing-xs; flex-shrink: 0; }
 
   &__btn {
     @include flex-center;
@@ -393,15 +370,8 @@ function handleAgreement(): void {
     margin-top: $spacing-xl;
     box-shadow: 0 4rpx 16rpx rgba(74, 144, 217, 0.35);
 
-    text {
-      font-size: $font-size-lg;
-      font-weight: $font-weight-semibold;
-      color: #fff;
-    }
-
-    &--loading {
-      opacity: 0.7;
-    }
+    text { font-size: $font-size-lg; font-weight: $font-weight-semibold; color: #fff; }
+    &--loading { opacity: 0.7; }
   }
 
   &__footer {
@@ -409,29 +379,16 @@ function handleAgreement(): void {
     margin-top: $spacing-xl;
     gap: $spacing-xs;
 
-    &-text {
-      font-size: $font-size-sm;
-      color: $color-text-placeholder;
-    }
-
-    &-link {
-      font-size: $font-size-sm;
-      color: $color-primary;
-      font-weight: $font-weight-medium;
-    }
+    &-text { font-size: $font-size-sm; color: $color-text-placeholder; }
+    &-link { font-size: $font-size-sm; color: $color-primary; font-weight: $font-weight-medium; }
   }
 }
 
-// 微信登录
 .login-wechat {
   &__desc {
     text-align: center;
     margin-bottom: $spacing-xl;
-
-    text {
-      font-size: $font-size-sm;
-      color: $color-text-placeholder;
-    }
+    text { font-size: $font-size-sm; color: $color-text-placeholder; }
   }
 
   &__btn {
@@ -442,34 +399,17 @@ function handleAgreement(): void {
     gap: $spacing-sm;
     box-shadow: 0 4rpx 16rpx rgba(7, 193, 96, 0.3);
 
-    text {
-      font-size: $font-size-lg;
-      font-weight: $font-weight-semibold;
-      color: #fff;
-    }
-
-    &--loading {
-      opacity: 0.7;
-    }
+    text { font-size: $font-size-lg; font-weight: $font-weight-semibold; color: #fff; }
+    &--loading { opacity: 0.7; }
   }
-
-  &__btn-icon {
-    font-size: $font-size-xl;
-  }
+  &__btn-icon { font-size: $font-size-xl; }
 }
 
-// 协议
 .login-agreement {
   @include flex-center;
   margin-top: 60rpx;
 
-  &__text {
-    font-size: $font-size-xs;
-    color: $color-text-placeholder;
-  }
-
-  &__link {
-    color: $color-primary;
-  }
+  &__text { font-size: $font-size-xs; color: $color-text-placeholder; }
+  &__link { color: $color-primary; }
 }
 </style>
