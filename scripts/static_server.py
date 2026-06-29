@@ -23,7 +23,8 @@ class ProxyHandler(http.server.SimpleHTTPRequestHandler):
             self.proxy_request('GET')
         else:
             # SPA fallback: serve index.html for non-file routes
-            if not os.path.exists(os.path.join(STATIC_DIR, self.path.lstrip('/'))) and '.' not in self.path.split('/')[-1]:
+            path_only = self.path.split('?')[0]
+            if not os.path.exists(os.path.join(STATIC_DIR, path_only.lstrip('/'))) and '.' not in path_only.split('/')[-1]:
                 self.path = '/index.html'
             super().do_GET()
 
