@@ -6,7 +6,6 @@
           v-model="store.query.subjectId"
           placeholder="全部科目"
           clearable
-          @change="onSubjectChange"
         >
           <el-option
             v-for="opt in subjectOptions"
@@ -22,7 +21,6 @@
           v-model="store.query.chapterId"
           placeholder="全部章节"
           clearable
-          @change="onChapterChange"
         >
           <el-option
             v-for="opt in chapterOptions"
@@ -88,7 +86,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, watch } from 'vue'
 import { useCategoryStore } from '@/stores/category'
 import { useQuestionStore } from '@/stores/question'
 
@@ -133,15 +131,15 @@ const tagOptions = computed(() => [
 ])
 
 // 科目变化时清空章节和知识点
-function onSubjectChange() {
+watch(() => store.query.subjectId, () => {
   store.query.chapterId = undefined
   store.query.tagId = undefined
-}
+})
 
 // 章节变化时清空知识点
-function onChapterChange() {
+watch(() => store.query.chapterId, () => {
   store.query.tagId = undefined
-}
+})
 
 onMounted(() => {
   categoryStore.fetchCategoryTree()
