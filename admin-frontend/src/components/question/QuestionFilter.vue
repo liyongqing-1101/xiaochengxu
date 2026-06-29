@@ -1,90 +1,162 @@
 <template>
-  <el-card class="filter-card">
-    <el-form :model="localFilters" inline>
+  <div class="question-filter">
+    <el-form :inline="true" :model="store.query" class="filter-form">
       <el-form-item label="科目">
-        <el-select v-model="localFilters.subjectId" clearable placeholder="全部科目" style="width:160px" @change="emitSearch">
-          <el-option v-for="s in subjects" :key="s.id" :label="s.name" :value="s.id" />
-        </el-select>
-      </el-form-item>
-      <el-form-item label="题型">
-        <el-select v-model="localFilters.type" clearable placeholder="全部题型" style="width:120px" @change="emitSearch">
-          <el-option label="单选" :value="1" />
-          <el-option label="多选" :value="2" />
-          <el-option label="判断" :value="3" />
-        </el-select>
-      </el-form-item>
-      <el-form-item label="难度">
-        <el-select v-model="localFilters.difficulty" clearable placeholder="全部难度" style="width:120px" @change="emitSearch">
-          <el-option label="简单" :value="1" />
-          <el-option label="中等" :value="2" />
-          <el-option label="困难" :value="3" />
-        </el-select>
-      </el-form-item>
-      <el-form-item label="状态">
-        <el-select v-model="localFilters.status" clearable placeholder="全部状态" style="width:120px" @change="emitSearch">
-          <el-option label="上架" :value="1" />
-          <el-option label="下架" :value="0" />
-        </el-select>
-      </el-form-item>
-      <el-form-item>
-        <el-input
-          v-model="localFilters.keyword"
-          placeholder="搜索题干关键词"
+        <el-select
+          v-model="store.query.subjectId"
+          placeholder="全部科目"
           clearable
-          style="width:220px"
-          @clear="emitSearch"
-          @keyup.enter="emitSearch"
+          @change="onSubjectChange"
         >
-          <template #prefix><el-icon><Search /></el-icon></template>
-        </el-input>
+          <el-option
+            v-for="opt in subjectOptions"
+            :key="opt.value"
+            :label="opt.label"
+            :value="opt.value"
+          />
+        </el-select>
       </el-form-item>
+
+      <el-form-item label="章节">
+        <el-select
+          v-model="store.query.chapterId"
+          placeholder="全部章节"
+          clearable
+          @change="onChapterChange"
+        >
+          <el-option
+            v-for="opt in chapterOptions"
+            :key="opt.value"
+            :label="opt.label"
+            :value="opt.value"
+          />
+        </el-select>
+      </el-form-item>
+
+      <el-form-item label="知识点">
+        <el-select
+          v-model="store.query.tagId"
+          placeholder="全部知识点"
+          clearable
+        >
+          <el-option
+            v-for="opt in tagOptions"
+            :key="opt.value"
+            :label="opt.label"
+            :value="opt.value"
+          />
+        </el-select>
+      </el-form-item>
+
+      <el-form-item label="题型">
+        <el-select v-model="store.query.type" placeholder="全部题型" clearable>
+          <el-option
+            v-for="opt in typeOptions"
+            :key="opt.value"
+            :label="opt.label"
+            :value="opt.value"
+          />
+        </el-select>
+      </el-form-item>
+
+      <el-form-item label="难度">
+        <el-select v-model="store.query.difficulty" placeholder="全部难度" clearable>
+          <el-option
+            v-for="opt in difficultyOptions"
+            :key="opt.value"
+            :label="opt.label"
+            :value="opt.value"
+          />
+        </el-select>
+      </el-form-item>
+
+      <el-form-item label="关键词">
+        <el-input
+          v-model="store.query.keyword"
+          placeholder="搜索题干"
+          clearable
+          @keyup.enter="$emit('search')"
+        />
+      </el-form-item>
+
       <el-form-item>
-        <el-button type="primary" @click="emitSearch">搜索</el-button>
-        <el-button @click="emitReset">重置</el-button>
+        <el-button type="primary" @click="$emit('search')">搜索</el-button>
+        <el-button @click="$emit('reset')">重置</el-button>
       </el-form-item>
     </el-form>
-  </el-card>
+  </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, watch, onMounted } from 'vue'
-import { Search } from '@element-plus/icons-vue'
-import { categoryApi } from '@/api/modules/category'
-import type { Subject } from '@/types/category'
-import type { QuestionQuery } from '@/types/question'
+import { computed, onMounted } from 'vue'
+import { useCategoryStore } from '@/stores/category'
+import { useQuestionStore } from '@/stores/question'
 
-const props = defineProps<{ filters: QuestionQuery }>()
-const emit = defineEmits<{ search: []; reset: [] }>()
+const store = useQuestionStore()
+const categoryStore = useCategoryStore()
 
-const subjects = ref<Subject[]>([])
-const localFilters = reactive({ ...props.filters })
+defineEmits<{
+  (e: 'search'): void
+  (e: 'reset'): void
+}>()
 
-watch(() => props.filters, (val) => {
-  Object.assign(localFilters, val)
-}, { deep: true })
+// 题型选项
+const typeOptions = [
+  { value: undefined, label: '全部题型' },
+  { value: 1, label: '单选题' },
+  { value: 2, label: '多选题' },
+  { value: 3, label: '判断题' },
+]
 
-function emitSearch() {
-  Object.assign(props.filters, localFilters)
-  props.filters.page = 1
-  emit('search')
+// 难度选项
+const difficultyOptions = [
+  { value: undefined, label: '全部难度' },
+  { value: 1, label: '简单' },
+  { value: 2, label: '中等' },
+  { value: 3, label: '困难' },
+]
+
+// 从 store 获取筛选数据
+const subjectOptions = computed(() => [
+  { value: undefined, label: '全部科目' },
+  ...categoryStore.subjects.map(s => ({ value: s.id, label: s.name })),
+])
+
+const chapterOptions = computed(() => [
+  { value: undefined, label: '全部章节' },
+  ...categoryStore.getChaptersBySubject(store.query.subjectId).map(c => ({ value: c.id, label: c.name })),
+])
+
+const tagOptions = computed(() => [
+  { value: undefined, label: '全部知识点' },
+  ...categoryStore.getTagsByChapter(store.query.chapterId).map(t => ({ value: t.id, label: t.name })),
+])
+
+// 科目变化时清空章节和知识点
+function onSubjectChange() {
+  store.query.chapterId = undefined
+  store.query.tagId = undefined
 }
 
-function emitReset() {
-  emit('reset')
+// 章节变化时清空知识点
+function onChapterChange() {
+  store.query.tagId = undefined
 }
 
-onMounted(async () => {
-  try {
-    const tree = await categoryApi.getTree()
-    if (tree && tree.length > 0 && tree[0].subjects) {
-      subjects.value = tree[0].subjects
-    }
-  } catch { /* ignore */ }
+onMounted(() => {
+  categoryStore.fetchCategoryTree()
 })
 </script>
 
-<style scoped lang="scss">
-.filter-card {
+<style scoped>
+.filter-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0;
+}
+
+.filter-form :deep(.el-form-item) {
   margin-bottom: 12px;
+  margin-right: 16px;
 }
 </style>
