@@ -64,30 +64,38 @@ public class PracticeServiceImpl implements PracticeService {
     @Override
     @Transactional
     public QuestionSessionDTO startSession(Long userId, StartSessionDTO params) {
-        LambdaQueryWrapper<ExamQuestion> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(ExamQuestion::getCategoryId, params.getCategoryId());
-        wrapper.eq(ExamQuestion::getSubjectId, params.getSubjectId());
-        wrapper.eq(ExamQuestion::getStatus, 1);
+        List<ExamQuestion> selectedQuestions;
 
-        if (params.getChapterId() != null) {
-            wrapper.eq(ExamQuestion::getChapterId, params.getChapterId());
+        // 随机试卷模式：按题型分别抽取指定数量
+        if ("random".equals(params.getMode()) && params.getSingleCount() != null
+                && params.getMultiCount() != null && params.getTrueFalseCount() != null) {
+            selectedQuestions = selectRandomExamQuestions(params);
+        } else {
+            LambdaQueryWrapper<ExamQuestion> wrapper = new LambdaQueryWrapper<>();
+            wrapper.eq(ExamQuestion::getCategoryId, params.getCategoryId());
+            wrapper.eq(ExamQuestion::getSubjectId, params.getSubjectId());
+            wrapper.eq(ExamQuestion::getStatus, 1);
+
+            if (params.getChapterId() != null) {
+                wrapper.eq(ExamQuestion::getChapterId, params.getChapterId());
+            }
+            if (params.getKnowledgePointId() != null) {
+                wrapper.eq(ExamQuestion::getTagId, params.getKnowledgePointId());
+            }
+
+            List<ExamQuestion> allQuestions = examQuestionMapper.selectList(wrapper);
+            if (allQuestions.isEmpty()) {
+                throw new BusinessException("该条件下没有可用题目");
+            }
+
+            Collections.shuffle(allQuestions);
+
+            int questionCount = params.getQuestionCount() != null && params.getQuestionCount() > 0
+                    ? Math.min(params.getQuestionCount(), allQuestions.size())
+                    : allQuestions.size();
+
+            selectedQuestions = allQuestions.subList(0, questionCount);
         }
-        if (params.getKnowledgePointId() != null) {
-            wrapper.eq(ExamQuestion::getTagId, params.getKnowledgePointId());
-        }
-
-        List<ExamQuestion> allQuestions = examQuestionMapper.selectList(wrapper);
-        if (allQuestions.isEmpty()) {
-            throw new BusinessException("该条件下没有可用题目");
-        }
-
-        Collections.shuffle(allQuestions);
-
-        int questionCount = params.getQuestionCount() != null && params.getQuestionCount() > 0
-                ? Math.min(params.getQuestionCount(), allQuestions.size())
-                : allQuestions.size();
-
-        List<ExamQuestion> selectedQuestions = allQuestions.subList(0, questionCount);
 
         String sessionId = UUID.randomUUID().toString().replace("-", "");
 
@@ -119,6 +127,56 @@ public class PracticeServiceImpl implements PracticeService {
         }
 
         return session;
+    }
+
+    /**
+     * 随机试卷模式：按题型分别抽取指定数量
+     * 单选 → 多选 → 判断 顺序排列
+     */
+    private List<ExamQuestion> selectRandomExamQuestions(StartSessionDTO params) {
+        List<ExamQuestion> result = new ArrayList<>();
+
+        // 单选题
+        if (params.getSingleCount() != null && params.getSingleCount() > 0) {
+            List<ExamQuestion> singles = queryQuestionsByType(
+                    params.getCategoryId(), params.getSubjectId(), 1);
+            Collections.shuffle(singles);
+            int count = Math.min(params.getSingleCount(), singles.size());
+            if (count > 0) result.addAll(singles.subList(0, count));
+        }
+
+        // 多选题
+        if (params.getMultiCount() != null && params.getMultiCount() > 0) {
+            List<ExamQuestion> multis = queryQuestionsByType(
+                    params.getCategoryId(), params.getSubjectId(), 2);
+            Collections.shuffle(multis);
+            int count = Math.min(params.getMultiCount(), multis.size());
+            if (count > 0) result.addAll(multis.subList(0, count));
+        }
+
+        // 判断题
+        if (params.getTrueFalseCount() != null && params.getTrueFalseCount() > 0) {
+            List<ExamQuestion> tfs = queryQuestionsByType(
+                    params.getCategoryId(), params.getSubjectId(), 3);
+            Collections.shuffle(tfs);
+            int count = Math.min(params.getTrueFalseCount(), tfs.size());
+            if (count > 0) result.addAll(tfs.subList(0, count));
+        }
+
+        if (result.isEmpty()) {
+            throw new BusinessException("该科目下没有可用题目");
+        }
+
+        return result;
+    }
+
+    private List<ExamQuestion> queryQuestionsByType(Long categoryId, Long subjectId, Integer type) {
+        LambdaQueryWrapper<ExamQuestion> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(ExamQuestion::getCategoryId, categoryId);
+        wrapper.eq(ExamQuestion::getSubjectId, subjectId);
+        wrapper.eq(ExamQuestion::getType, type);
+        wrapper.eq(ExamQuestion::getStatus, 1);
+        return examQuestionMapper.selectList(wrapper);
     }
 
     @Override

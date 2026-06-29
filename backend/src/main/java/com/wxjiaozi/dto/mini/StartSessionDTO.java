@@ -18,5 +18,14 @@ public class StartSessionDTO {
 
     private Integer questionCount;
 
+    /** 随机试卷：单选题数量 */
+    private Integer singleCount;
+
+    /** 随机试卷：多选题数量 */
+    private Integer multiCount;
+
+    /** 随机试卷：判断题数量 */
+    private Integer trueFalseCount;
+
     private String mode;
 }
