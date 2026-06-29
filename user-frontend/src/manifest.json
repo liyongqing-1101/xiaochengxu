@@ -6,7 +6,7 @@
   "mp-weixin": {
     "appid": "__WEIXIN_APPID__",
     "setting": {
-      "urlCheck": true,
+      "urlCheck": false,
       "es6": true,
       "minified": true,
       "postcss": true
