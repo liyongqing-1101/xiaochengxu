@@ -28,8 +28,8 @@ export const useCategoryStore = defineStore('category', () => {
   const chapters = ref<FlatChapter[]>([])
   const tags = ref<FlatTag[]>([])
 
-  async function fetchCategoryTree() {
-    if (tree.value.length > 0) return  // 已加载，跳过
+  async function fetchCategoryTree(forceRefresh = false) {
+    if (!forceRefresh && tree.value.length > 0) return  // 已加载，跳过
     loading.value = true
     try {
       const res = await getCategoryTree()
