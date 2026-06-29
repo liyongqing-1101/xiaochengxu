@@ -147,7 +147,12 @@ def deploy_backend(client):
     # 1. 拉取代码
     remote_git_pull(client)
 
-    # 2. Maven 打包
+    # 2. 停止旧服务
+    log("🛑 停止旧后端服务...")
+    run_remote(client, "pkill -f 'exam-backend' 2>/dev/null; sleep 2")
+    run_remote(client, "pkill -9 -f 'exam-backend' 2>/dev/null; sleep 1")
+
+    # 3. Maven 打包
     log("📦 Maven 打包中...")
     out, exit_code = run_remote_stream(
         client,
@@ -166,70 +171,66 @@ def deploy_backend(client):
             log("❌ Maven 打包失败!", Colors.RED)
             return False
 
-    # 检查 JAR 是否生成
+    # 检查 JAR
     out, _ = run_remote(client, f"ls -la {BACKEND_DIR}/target/*.jar 2>&1", show_output=False)
     if '.jar' not in out:
         log("❌ JAR 文件未生成!", Colors.RED)
         return False
-
     log("Maven 打包成功 ✅", Colors.GREEN)
 
-    # 3. 停止旧服务
-    log("🛑 停止旧后端服务...")
-    run_remote(client, "pkill -f 'exam-backend' 2>/dev/null; sleep 2")
-    run_remote(client, "pkill -9 -f 'exam-backend' 2>/dev/null; sleep 1")
-
     # 4. 启动新服务
-    log("🚀 启动新后端服务...")
-    run_remote(client,
-        f"cd {BACKEND_DIR} && nohup java -Xms128m -Xmx256m -jar target/exam-backend-1.0.0.jar "
-        f"> /home/backend.log 2>&1 &"
-    )
-
-    # 5. 等待启动
-    log("⏳ 等待服务启动 (15秒)...")
-    time.sleep(15)
-
-    # 6. 验证
-    out, _ = run_remote(client, "curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/api/doc.html", show_output=False)
-    if '200' in out:
-        log("✅ 后端启动成功! http://47.97.193.230:8080/api/doc.html", Colors.GREEN)
-    else:
-        log(f"⚠️  后端可能未正常启动 (HTTP {out.strip()})，请检查日志", Colors.YELLOW)
-        run_remote(client, "tail -30 /home/backend.log")
-
-    # 7. 检查内存
-    run_remote(client, "free -h | head -2")
-
+    start_backend(client)
     return True
 
 # ========== 前端部署 ==========
 def deploy_frontend(client):
-    """部署管理后台前端: git pull → npm install → 重启 vite"""
-    log_step("🎨 部署管理后台前端 (Vue3)")
+    """部署管理后台前端: git pull → npm install → vite build → 静态代理服务器"""
+    log_step("🎨 部署管理后台前端 (Vue3 生产模式)")
 
     # 1. 拉取代码
     remote_git_pull(client)
 
-    # 2. 安装依赖 (如果有 package.json 变化)
+    # 2. 安装依赖
     log("📦 检查依赖更新...")
     run_remote(client, f"cd {FRONTEND_DIR} && npm install 2>&1 | tail -5", timeout=120)
 
-    # 3. 停止旧服务
-    log("🛑 停止旧前端服务...")
-    run_remote(client, "pkill -f 'vite' 2>/dev/null; sleep 2")
-    run_remote(client, "pkill -9 -f 'vite' 2>/dev/null; sleep 1")
+    # 3. 构建生产版本 (需要较多内存, 先停掉后端)
+    log("🔨 构建前端生产版本 (需要较多内存, 暂停后端)...")
+    run_remote(client, "pkill -f 'exam-backend' 2>/dev/null; sleep 2")
+    run_remote(client, "pkill -9 -f 'exam-backend' 2>/dev/null; sleep 1")
 
-    # 4. 启动新服务
-    log("🚀 启动新前端服务...")
-    run_remote(client,
-        f"cd {FRONTEND_DIR} && NODE_OPTIONS='--max-old-space-size=256' "
-        f"nohup npx vite --host 0.0.0.0 --port 3001 > /home/admin-frontend.log 2>&1 &"
+    log("📦 vite build 中...")
+    out, exit_code = run_remote_stream(
+        client,
+        f"cd {FRONTEND_DIR} && NODE_OPTIONS='--max-old-space-size=512' npx vite build 2>&1",
+        timeout=300
     )
 
-    # 5. 等待启动
-    log("⏳ 等待服务启动 (8秒)...")
-    time.sleep(8)
+    if exit_code != 0:
+        log("❌ 前端构建失败!", Colors.RED)
+        # 重启后端即使前端失败
+        start_backend(client)
+        return False
+
+    # 检查构建产物
+    out, _ = run_remote(client, f"ls {FRONTEND_DIR}/dist/index.html 2>&1", show_output=False)
+    if 'index.html' not in out:
+        log("❌ 前端构建产物不存在!", Colors.RED)
+        start_backend(client)
+        return False
+
+    log("前端构建成功 ✅", Colors.GREEN)
+
+    # 4. 重启后端
+    start_backend(client)
+
+    # 5. 停止旧前端服务, 启动新的
+    log("🔄 重启前端静态服务...")
+    run_remote(client, "pkill -9 -f 'static_server.py' 2>/dev/null; pkill -9 -f 'python3.*http.server' 2>/dev/null; sleep 1")
+    run_remote(client,
+        f"cd {PROJECT_DIR} && nohup python3 scripts/static_server.py 3001 > /home/admin-frontend.log 2>&1 &"
+    )
+    time.sleep(3)
 
     # 6. 验证
     out, _ = run_remote(client, "curl -s -o /dev/null -w '%{http_code}' http://localhost:3001", show_output=False)
@@ -240,6 +241,22 @@ def deploy_frontend(client):
         run_remote(client, "cat /home/admin-frontend.log")
 
     return True
+
+def start_backend(client):
+    """启动后端服务"""
+    log("🚀 启动后端服务...")
+    run_remote(client,
+        f"cd {BACKEND_DIR} && nohup java -Xms64m -Xmx192m -XX:+UseSerialGC "
+        f"-jar target/exam-backend-1.0.0.jar > /home/backend.log 2>&1 &"
+    )
+    log("⏳ 等待后端启动 (15秒)...")
+    time.sleep(15)
+    out, _ = run_remote(client, "curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/api/doc.html", show_output=False)
+    if '200' in out:
+        log("✅ 后端启动成功!", Colors.GREEN)
+    else:
+        log(f"⚠️  后端启动可能失败 (HTTP {out.strip()})", Colors.YELLOW)
+        run_remote(client, "tail -20 /home/backend.log")
 
 # ========== 状态检查 ==========
 def check_status(client):
