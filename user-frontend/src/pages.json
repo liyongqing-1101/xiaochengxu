@@ -25,6 +25,25 @@
         "navigationBarTitleText": "学习",
         "enablePullDownRefresh": true
       }
+    },
+    {
+      "path": "pages/teaching-aid/index",
+      "style": {
+        "navigationBarTitleText": "教辅"
+      }
+    },
+    {
+      "path": "pages/community/index",
+      "style": {
+        "navigationBarTitleText": "社区"
+      }
+    },
+    {
+      "path": "pages/profile/index",
+      "style": {
+        "navigationBarTitleText": "我的",
+        "navigationStyle": "custom"
+      }
     }
   ],
   "subPackages": [
@@ -56,13 +75,6 @@
       "root": "subpackages/profile",
       "pages": [
         {
-          "path": "pages/index",
-          "style": {
-            "navigationBarTitleText": "我的",
-            "navigationStyle": "custom"
-          }
-        },
-        {
           "path": "pages/favorites",
           "style": {
             "navigationBarTitleText": "我的收藏"
@@ -81,23 +93,6 @@
           }
         }
       ]
-    },
-    {
-      "root": "subpackages/placeholder",
-      "pages": [
-        {
-          "path": "pages/teaching-aid",
-          "style": {
-            "navigationBarTitleText": "教辅"
-          }
-        },
-        {
-          "path": "pages/community",
-          "style": {
-            "navigationBarTitleText": "社区"
-          }
-        }
-      ]
     }
   ],
   "preloadRule": {
@@ -107,7 +102,7 @@
     },
     "pages/study/index": {
       "network": "wifi",
-      "packages": ["subpackages/answer", "subpackages/wrong-book"]
+      "packages": ["subpackages/answer", "subpackages/wrong-book", "subpackages/profile"]
     }
   },
   "tabBar": {
@@ -117,9 +112,9 @@
     "list": [
       { "pagePath": "pages/index/index", "text": "首页" },
       { "pagePath": "pages/study/index", "text": "学习" },
-      { "pagePath": "subpackages/placeholder/pages/teaching-aid", "text": "教辅" },
-      { "pagePath": "subpackages/placeholder/pages/community", "text": "社区" },
-      { "pagePath": "subpackages/profile/pages/index", "text": "我的" }
+      { "pagePath": "pages/teaching-aid/index", "text": "教辅" },
+      { "pagePath": "pages/community/index", "text": "社区" },
+      { "pagePath": "pages/profile/index", "text": "我的" }
     ]
   },
   "globalStyle": {

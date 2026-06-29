@@ -1,31 +1,12 @@
 <template>
-  <!--
-    首页 — 核心页面
-    UI 参考「研岛」清新柔和风格
-    布局:
-      1. 顶部标题区(标题 + 倒计时 + 打卡天数)
-      2. 搜索栏
-      3. 功能横幅(横向滚动)
-      4. 每日一题卡片
-      5. 科目题库网格(2x2)
-      6. 快捷功能入口(2列)
-      7. 底部 4 宫格功能按钮
-      8. 底部 TabBar
-
-    [EXTENSION-POINT] 新增考试分类: 科目网格/每日一题/搜索范围
-    自动根据 currentCategoryId 动态切换
-  -->
   <view class="home-page">
-    <!-- ========== 1. 顶部区域 ========== -->
+    <!-- ========== 顶部区域 ========== -->
     <view class="home-header">
-      <!-- 状态栏占位 -->
       <view class="home-header__status" :style="{ height: statusBarHeight + 'px' }" />
-
-      <!-- 标题行: 左侧标题 + 右侧倒计时/打卡 -->
       <view class="home-header__main">
         <view class="home-header__left">
-          <text class="home-header__title">{{ categoryMeta.homeTitle }}</text>
-          <text class="home-header__subtitle">{{ categoryMeta.description }}</text>
+          <text class="home-header__title">高校教资题库</text>
+          <text class="home-header__subtitle">高校教师资格证考试</text>
         </view>
         <view class="home-header__right">
           <view class="home-header__countdown">
@@ -34,31 +15,28 @@
             <text class="home-header__countdown-label">天</text>
           </view>
           <view class="home-header__checkin" @tap="handleCheckIn">
-            <text class="home-header__checkin-text">
-              已打卡 {{ userStore.streakDays }} 天
-            </text>
+            <text class="home-header__checkin-text">已打卡 {{ userStore.streakDays }} 天</text>
           </view>
         </view>
       </view>
-
-      <!-- 微信胶囊占位 -->
       <view class="home-header__capsule-placeholder" />
     </view>
 
-    <!-- ========== 2. 搜索栏 ========== -->
-    <SearchBar @click="handleSearchClick" />
+    <!-- ========== 考试类型切换（替代原搜索栏位置） ========== -->
+    <view class="home-category-bar" @tap="showCategorySwitch = true">
+      <view class="home-category-bar__left">
+        <text class="home-category-bar__icon">📂</text>
+        <text class="home-category-bar__text">{{ examStore.currentCategoryMeta.name }}</text>
+      </view>
+      <text class="home-category-bar__arrow">切换 ›</text>
+    </view>
 
-    <!-- ========== 3. 功能横幅 (横向滚动) ========== -->
+    <!-- ========== 功能横幅 ========== -->
     <view class="home-banner">
       <scroll-view scroll-x class="home-banner__scroll" :show-scrollbar="false">
         <view class="home-banner__track">
-          <view
-            v-for="(banner, i) in banners"
-            :key="i"
-            class="home-banner__item"
-            :style="{ background: banner.bg }"
-            @tap="handleBannerClick(banner)"
-          >
+          <view v-for="(banner, i) in banners" :key="i" class="home-banner__item"
+            :style="{ background: banner.bg }" @tap="handleBannerClick(banner)">
             <text class="home-banner__emoji">{{ banner.emoji }}</text>
             <text class="home-banner__text">{{ banner.text }}</text>
           </view>
@@ -66,7 +44,7 @@
       </scroll-view>
     </view>
 
-    <!-- ========== 4. 每日一题卡片 ========== -->
+    <!-- ========== 每日一题 ========== -->
     <DailyQuestionCard
       :daily-question="dailyQuestion"
       :answered="userStore.todayCheckedIn"
@@ -74,12 +52,10 @@
       @go-answer="handleDailyQuestion"
     />
 
-    <!-- ========== 5. 科目题库网格 (2x2) ========== -->
-    <!-- [EXTENSION-POINT] subjects 来自当前分类, 新增分类自动渲染新科目 -->
+    <!-- ========== 科目题库（4 个固定科目 + X/Y 进度） ========== -->
     <view class="home-section">
       <view class="home-section__header">
         <text class="home-section__title">科目题库</text>
-        <text class="home-section__more" @tap="handleMoreSubjects">全部 ›</text>
       </view>
       <view class="home-subject-grid">
         <view
@@ -93,7 +69,9 @@
           </view>
           <view class="home-subject-item__info">
             <text class="home-subject-item__name">{{ subject.name }}</text>
-            <text class="home-subject-item__count">{{ subject.totalQuestions }}题</text>
+            <text class="home-subject-item__progress">
+              {{ subject.completedQuestions || 0 }} / {{ subject.totalQuestions }}
+            </text>
           </view>
           <ProgressBar
             :current="subject.completedQuestions || 0"
@@ -106,74 +84,62 @@
       </view>
     </view>
 
-    <!-- ========== 6. 快捷功能入口 (2列) ========== -->
-    <view class="home-quick-entries">
-      <view class="home-quick-entry" @tap="handleQuickEntry('past-exam')">
-        <view class="home-quick-entry__icon" style="background: #EBF3FC;">
-          <text class="home-quick-entry__emoji">📋</text>
-        </view>
-        <view class="home-quick-entry__info">
-          <text class="home-quick-entry__title">历年真题</text>
-          <text class="home-quick-entry__desc">历年考试真题汇总</text>
-        </view>
-      </view>
-      <view class="home-quick-entry" @tap="handleQuickEntry('memory-card')">
-        <view class="home-quick-entry__icon" style="background: #FFF7E6;">
-          <text class="home-quick-entry__emoji">🃏</text>
-        </view>
-        <view class="home-quick-entry__info">
-          <text class="home-quick-entry__title">记忆卡</text>
-          <text class="home-quick-entry__desc">知识点快速记忆</text>
-        </view>
-      </view>
-    </view>
-
-    <!-- ========== 7. 底部 4 宫格功能按钮 ========== -->
+    <!-- ========== 底部功能按钮 ========== -->
     <view class="home-tool-grid">
       <view class="home-tool-item" @tap="handleToolClick('wrong-book')">
         <view class="home-tool-item__icon-wrap" style="background: #FFF1F0;">
           <text class="home-tool-item__emoji">📝</text>
         </view>
         <text class="home-tool-item__text">错题本</text>
-        <view v-if="wrongCount > 0" class="home-tool-item__badge">{{ wrongCount > 99 ? '99+' : wrongCount }}</view>
+        <view v-if="wrongCount > 0" class="home-tool-item__badge">
+          {{ wrongCount > 99 ? '99+' : wrongCount }}
+        </view>
       </view>
-      <view class="home-tool-item" @tap="handleToolClick('random')">
+      <view class="home-tool-item" @tap="showRandomPopup = true">
         <view class="home-tool-item__icon-wrap" style="background: #EBF3FC;">
           <text class="home-tool-item__emoji">🎲</text>
         </view>
         <text class="home-tool-item__text">随机刷题</text>
       </view>
-      <view class="home-tool-item" @tap="handleToolClick('question-list')">
+      <view class="home-tool-item" @tap="handleToolClick('daily')">
         <view class="home-tool-item__icon-wrap" style="background: #F6FFED;">
-          <text class="home-tool-item__emoji">📄</text>
+          <text class="home-tool-item__emoji">📅</text>
         </view>
-        <text class="home-tool-item__text">我的题单</text>
+        <text class="home-tool-item__text">每日一题</text>
       </view>
-      <view class="home-tool-item" @tap="handleToolClick('notes')">
+      <view class="home-tool-item" @tap="handleToolClick('quick')">
         <view class="home-tool-item__icon-wrap" style="background: #FFF7E6;">
-          <text class="home-tool-item__emoji">📒</text>
+          <text class="home-tool-item__emoji">⚡</text>
         </view>
-        <text class="home-tool-item__text">我的笔记</text>
+        <text class="home-tool-item__text">快速练习</text>
       </view>
     </view>
 
-    <!-- 安全区域底部占位 -->
     <view class="home-safe-bottom" />
 
-    <!-- ========== 8. 底部 TabBar ========== -->
+    <!-- ========== 底部 TabBar ========== -->
     <CustomTabbar
       current-path="/pages/index/index"
       :wrong-count="wrongCount"
       @change="handleTabChange"
     />
 
-    <!-- 分类切换弹窗(多分类时显示) -->
-    <!-- [EXTENSION-POINT] 当有多个考试分类时自动显示切换入口 -->
+    <!-- 分类切换弹窗 -->
     <CategorySwitch
       :visible="showCategorySwitch"
       :current-id="examStore.currentCategoryId"
       @close="showCategorySwitch = false"
       @select="handleCategorySwitch"
+    />
+
+    <!-- 随机刷题弹窗 -->
+    <RandomExamPopup
+      :visible="showRandomPopup"
+      :subjects="displaySubjects"
+      :selected-id="randomSubjectId"
+      @close="showRandomPopup = false"
+      @select="handleRandomSubjectSelect"
+      @start="handleRandomStart"
     />
   </view>
 </template>
@@ -186,42 +152,52 @@ import { useWrongBookStore } from '@/stores/wrongBook'
 import { useCheckIn } from '@/composables/useCheckIn'
 import type { Subject } from '@/types/exam'
 import type { DailyQuestion } from '@/types/question'
-import SearchBar from '@components/search/SearchBar.vue'
 import DailyQuestionCard from '@components/question/DailyQuestionCard.vue'
 import ProgressBar from '@components/question/ProgressBar.vue'
 import CustomTabbar from '@components/tabbar/CustomTabbar.vue'
 import CategorySwitch from '@components/category/CategorySwitch.vue'
+import RandomExamPopup from '@components/exam/RandomExamPopup.vue'
 
 const userStore = useUserStore()
 const examStore = useExamStore()
 const wrongBookStore = useWrongBookStore()
 const { doCheckIn } = useCheckIn()
 
-// 系统信息
 const systemInfo = uni.getSystemInfoSync()
 const statusBarHeight = systemInfo.statusBarHeight || 20
 
-// 分类元信息
-const categoryMeta = computed(() => examStore.currentCategoryMeta)
-
-// 倒计时天数
 const countdownDays = ref(0)
-
-// 每日一题
 const dailyQuestion = ref<DailyQuestion | null>(null)
+const showCategorySwitch = ref(false)
+const showRandomPopup = ref(false)
+const randomSubjectId = ref<number | null>(null)
 
-// 科目列表(最多显示4个)
+// 4 个固定科目
+const FIXED_SUBJECTS = [
+  { id: 1, name: '高等教育学', icon: '📖', color: '#4A90D9' },
+  { id: 2, name: '高等教育法规和政策', icon: '⚖️', color: '#52C41A' },
+  { id: 3, name: '教师伦理学', icon: '🎓', color: '#FAAD14' },
+  { id: 4, name: '大学心理学', icon: '🧠', color: '#FF4D4F' },
+]
+
 const displaySubjects = computed<Subject[]>(() => {
-  return examStore.subjects.slice(0, 4)
+  return FIXED_SUBJECTS.map(fixed => {
+    const serverSubject = examStore.subjects.find(s => s.name === fixed.name)
+    return {
+      id: serverSubject?.id || fixed.id,
+      categoryId: examStore.currentCategoryId,
+      name: fixed.name,
+      icon: fixed.icon,
+      totalQuestions: serverSubject?.totalQuestions || 0,
+      completedQuestions: (serverSubject as any)?.completedQuestions || 0,
+      sortOrder: 0,
+      status: 1,
+    } as Subject
+  })
 })
 
-// 错题总数
 const wrongCount = computed(() => wrongBookStore.totalCount)
 
-// 分类切换弹窗
-const showCategorySwitch = ref(false)
-
-// 功能横幅数据
 const banners = [
   { emoji: '🔥', text: '每日打卡赢积分', bg: 'linear-gradient(135deg, #FFF1F0, #FFE7E5)' },
   { emoji: '📚', text: '海量题库随时刷', bg: 'linear-gradient(135deg, #EBF3FC, #D6E8FA)' },
@@ -229,24 +205,11 @@ const banners = [
   { emoji: '💡', text: '智能错题复习', bg: 'linear-gradient(135deg, #FFF7E6, #FFECD0)' },
 ]
 
-// 科目图标映射
-const subjectIcons: Record<number, string> = {
-  1: '📖', 2: '📝', 3: '🎓', 4: '📚',
-  5: '📋', 6: '📌', 7: '🔖', 8: '📑',
-}
-
-// 科目主题色
-const subjectColors: Record<number, string> = {
-  1: '#4A90D9', 2: '#52C41A', 3: '#FAAD14', 4: '#FF4D4F',
-  5: '#722ED1', 6: '#13C2C2', 7: '#EB2F96', 8: '#FA8C16',
-}
-
 function subjectIcon(id: number): string {
-  return subjectIcons[id] || '📚'
+  return FIXED_SUBJECTS.find(s => s.id === id)?.icon || '📚'
 }
-
 function subjectColor(id: number): string {
-  return subjectColors[id] || '#4A90D9'
+  return FIXED_SUBJECTS.find(s => s.id === id)?.color || '#4A90D9'
 }
 
 // ═══════════════════════════════════════
@@ -254,17 +217,11 @@ function subjectColor(id: number): string {
 // ═══════════════════════════════════════
 async function loadPageData(): Promise<void> {
   try {
-    // 并行加载分类和用户统计
     await Promise.all([
       examStore.fetchCategories(),
       userStore.fetchStats(),
     ])
-
-    // 加载每日一题
     loadDailyQuestion()
-
-    // 计算倒计时(假设考试日期为固定日期, 实际应从后端获取)
-    // [EXTENSION-POINT] 不同考试分类有不同考试日期
     calculateCountdown()
   } catch (e) {
     console.error('首页数据加载失败:', e)
@@ -275,18 +232,11 @@ async function loadDailyQuestion(): Promise<void> {
   try {
     const { questionApi } = await import('@/api/modules/question')
     dailyQuestion.value = await questionApi.getDailyQuestion(examStore.currentCategoryId)
-  } catch {
-    // 静默失败, 无每日一题也正常显示
-  }
+  } catch { /* 静默失败 */ }
 }
 
 function calculateCountdown(): void {
-  // [EXTENSION-POINT] 不同考试分类配置不同考试日期
-  const examDates: Record<number, string> = {
-    1: '2026-10-31', // 教资
-    // 2: '2026-09-20', // 计算机二级
-    // 3: '2026-11-14', // 软考
-  }
+  const examDates: Record<number, string> = { 1: '2026-10-31' }
   const examDate = examDates[examStore.currentCategoryId] || '2026-12-31'
   const target = new Date(examDate)
   const now = new Date()
@@ -297,18 +247,10 @@ function calculateCountdown(): void {
 // ═══════════════════════════════════════
 // 事件处理
 // ═══════════════════════════════════════
-
-/** 搜索 */
-function handleSearchClick(): void {
-  uni.navigateTo({ url: '/pages/study/index?focusSearch=1' })
-}
-
-/** 打卡 */
 async function handleCheckIn(): Promise<void> {
   await doCheckIn()
 }
 
-/** 每日一题 */
 function handleDailyQuestion(): void {
   if (!dailyQuestion.value?.question) return
   uni.navigateTo({
@@ -316,71 +258,59 @@ function handleDailyQuestion(): void {
   })
 }
 
-/** 横幅点击 */
 function handleBannerClick(banner: { text: string }): void {
   uni.showToast({ title: banner.text, icon: 'none' })
 }
 
-/** 科目点击 — 进入答题 */
+/** 科目点击 — 从已刷题的下一题开始顺序刷题 */
 function handleSubjectClick(subject: Subject): void {
+  const startFrom = (subject.completedQuestions || 0) + 1
   uni.navigateTo({
-    url: `/subpackages/answer/pages/index?subjectId=${subject.id}&mode=practice`,
+    url: `/subpackages/answer/pages/index?subjectId=${subject.id}&mode=sequential&startFrom=${startFrom}`,
   })
 }
 
-/** 更多科目 — 跳转学习页 */
-function handleMoreSubjects(): void {
-  uni.switchTab({ url: '/pages/study/index' })
-}
-
-/** 快捷入口 */
-function handleQuickEntry(type: string): void {
-  // [EXTENSION-POINT] 快捷入口可扩展对应功能页面
-  if (type === 'past-exam') {
-    uni.navigateTo({
-      url: `/pages/study/index?filter=past-exam`,
-    })
-  } else if (type === 'memory-card') {
-    uni.showToast({ title: '记忆卡功能即将上线', icon: 'none' })
-  }
-}
-
-/** 底部 4 宫格 */
 function handleToolClick(type: string): void {
   switch (type) {
     case 'wrong-book':
       uni.navigateTo({ url: '/subpackages/wrong-book/pages/index' })
       break
-    case 'random':
-      // 随机刷题 — 进入答题页, mode=random
-      uni.navigateTo({
-        url: `/subpackages/answer/pages/index?subjectId=0&mode=random`,
-      })
+    case 'daily':
+      handleDailyQuestion()
       break
-    case 'question-list':
-      uni.showToast({ title: '题单功能即将上线', icon: 'none' })
-      break
-    case 'notes':
-      uni.showToast({ title: '笔记功能即将上线', icon: 'none' })
+    case 'quick':
+      uni.showToast({ title: '快速练习即将上线', icon: 'none' })
       break
   }
 }
 
-/** Tab 切换 */
 function handleTabChange(path: string): void {
   uni.switchTab({ url: path })
 }
 
-/** 分类切换 */
 function handleCategorySwitch(id: number): void {
   examStore.switchCategory(id)
-  // 重新加载首页数据
   loadPageData()
 }
 
 // ═══════════════════════════════════════
-// 生命周期
+// 随机刷题
 // ═══════════════════════════════════════
+function handleRandomSubjectSelect(id: number): void {
+  randomSubjectId.value = id
+}
+
+function handleRandomStart(): void {
+  if (!randomSubjectId.value) {
+    uni.showToast({ title: '请选择科目', icon: 'none' })
+    return
+  }
+  showRandomPopup.value = false
+  uni.navigateTo({
+    url: `/subpackages/answer/pages/index?subjectId=${randomSubjectId.value}&mode=random`,
+  })
+}
+
 onMounted(() => {
   loadPageData()
 })
@@ -393,7 +323,7 @@ onMounted(() => {
 }
 
 // ═══════════════════════════════════════
-// 1. 顶部区域
+// 顶部区域
 // ═══════════════════════════════════════
 .home-header {
   position: relative;
@@ -470,14 +400,44 @@ onMounted(() => {
 }
 
 // ═══════════════════════════════════════
-// 3. 功能横幅
+// 考试类型切换栏
+// ═══════════════════════════════════════
+.home-category-bar {
+  @include flex-between;
+  margin: 0 $spacing-base $spacing-md;
+  padding: $spacing-md $spacing-base;
+  background: $color-bg-white;
+  border-radius: $radius-base;
+  box-shadow: $shadow-sm;
+
+  &__left {
+    @include flex-start;
+    gap: $spacing-sm;
+  }
+
+  &__icon {
+    font-size: $font-size-lg;
+  }
+
+  &__text {
+    font-size: $font-size-base;
+    font-weight: $font-weight-medium;
+    color: $color-text-primary;
+  }
+
+  &__arrow {
+    font-size: $font-size-sm;
+    color: $color-primary;
+  }
+}
+
+// ═══════════════════════════════════════
+// 功能横幅
 // ═══════════════════════════════════════
 .home-banner {
   margin: 0 $spacing-base $spacing-md;
 
-  &__scroll {
-    width: 100%;
-  }
+  &__scroll { width: 100%; }
 
   &__track {
     @include flex-start;
@@ -494,9 +454,7 @@ onMounted(() => {
     box-shadow: $shadow-sm;
   }
 
-  &__emoji {
-    font-size: $font-size-md;
-  }
+  &__emoji { font-size: $font-size-md; }
 
   &__text {
     font-size: $font-size-sm;
@@ -506,7 +464,7 @@ onMounted(() => {
 }
 
 // ═══════════════════════════════════════
-// 5. 科目题库网格
+// 科目题库网格
 // ═══════════════════════════════════════
 .home-section {
   margin: 0 $spacing-base $spacing-md;
@@ -520,11 +478,6 @@ onMounted(() => {
     font-size: $font-size-lg;
     font-weight: $font-weight-semibold;
     color: $color-text-primary;
-  }
-
-  &__more {
-    font-size: $font-size-sm;
-    color: $color-primary;
   }
 }
 
@@ -546,75 +499,29 @@ onMounted(() => {
     @include flex-center;
   }
 
-  &__emoji {
-    font-size: 36rpx;
-  }
+  &__emoji { font-size: 36rpx; }
 
-  &__info {
-    @include flex-between;
-  }
+  &__info { @include flex-between; }
 
   &__name {
     font-size: $font-size-base;
     font-weight: $font-weight-medium;
     color: $color-text-primary;
-  }
-
-  &__count {
-    font-size: $font-size-xs;
-    color: $color-text-placeholder;
-  }
-}
-
-// ═══════════════════════════════════════
-// 6. 快捷功能入口
-// ═══════════════════════════════════════
-.home-quick-entries {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: $spacing-sm;
-  margin: 0 $spacing-base $spacing-md;
-}
-
-.home-quick-entry {
-  @include card;
-  @include flex-start;
-  gap: $spacing-md;
-
-  &__icon {
-    width: 80rpx;
-    height: 80rpx;
-    border-radius: $radius-base;
-    @include flex-center;
-    flex-shrink: 0;
-  }
-
-  &__emoji {
-    font-size: 40rpx;
-  }
-
-  &__info {
-    @include flex-column;
-    gap: 4rpx;
-    flex: 1;
-    min-width: 0;
-  }
-
-  &__title {
-    font-size: $font-size-base;
-    font-weight: $font-weight-medium;
-    color: $color-text-primary;
-  }
-
-  &__desc {
-    font-size: $font-size-xs;
-    color: $color-text-placeholder;
     @include text-ellipsis(1);
+    flex: 1;
+    margin-right: $spacing-sm;
+  }
+
+  &__progress {
+    font-size: $font-size-xs;
+    color: $color-primary;
+    font-weight: $font-weight-medium;
+    white-space: nowrap;
   }
 }
 
 // ═══════════════════════════════════════
-// 7. 底部 4 宫格
+// 底部功能按钮
 // ═══════════════════════════════════════
 .home-tool-grid {
   display: grid;
@@ -639,9 +546,7 @@ onMounted(() => {
     @include flex-center;
   }
 
-  &__emoji {
-    font-size: 40rpx;
-  }
+  &__emoji { font-size: 40rpx; }
 
   &__text {
     font-size: $font-size-sm;

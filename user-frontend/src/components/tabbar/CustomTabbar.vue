@@ -61,19 +61,19 @@ const tabs = computed<TabItem[]>(() => [
     activeIcon: '/static/images/icons/tab-study-active.png',
   },
   {
-    path: '/subpackages/placeholder/pages/teaching-aid',
+    path: '/pages/teaching-aid/index',
     text: '教辅',
     icon: '/static/images/icons/tab-teach.png',
     activeIcon: '/static/images/icons/tab-teach-active.png',
   },
   {
-    path: '/subpackages/placeholder/pages/community',
+    path: '/pages/community/index',
     text: '社区',
     icon: '/static/images/icons/tab-community.png',
     activeIcon: '/static/images/icons/tab-community-active.png',
   },
   {
-    path: '/subpackages/profile/pages/index',
+    path: '/pages/profile/index',
     text: '我的',
     icon: '/static/images/icons/tab-profile.png',
     activeIcon: '/static/images/icons/tab-profile-active.png',

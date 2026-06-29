@@ -17,6 +17,7 @@ declare module 'vue' {
     DailyQuestionCard: typeof import('./../components/question/DailyQuestionCard.vue')['default']
     ProgressBar: typeof import('./../components/question/ProgressBar.vue')['default']
     QuestionCard: typeof import('./../components/question/QuestionCard.vue')['default']
+    RandomExamPopup: typeof import('./../components/exam/RandomExamPopup.vue')['default']
     SearchBar: typeof import('./../components/search/SearchBar.vue')['default']
   }
 }

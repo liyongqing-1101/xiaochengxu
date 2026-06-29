@@ -194,13 +194,18 @@ const submitResult = ref<SubmitResult | null>(null)
 const submittedCorrectAnswer = ref<string[]>([])
 const subjectName = ref('')
 
+// 随机模式 30 分钟，其他模式 45 分钟
+const RANDOM_EXAM_SECONDS = 30 * 60
+
 // 计时器
 const { display: timerDisplay, remaining: timerRemaining, start: startTimer, stop: stopTimer, reset: resetTimer } =
   useTimer(TIMER.COUNTDOWN_SECONDS, () => {
-    // 超时自动结束
     uni.showToast({ title: '答题时间到', icon: 'none' })
     handleEndSession()
   })
+
+// 当前模式
+const currentMode = ref('practice')
 
 // 响应式计算
 const currentQuestion = computed(() => questionStore.currentQuestion)
@@ -221,24 +226,40 @@ const questionOrder = computed(() =>
 
 // 从页面参数获取配置
 onMounted(async () => {
-  const { subjectId, mode, chapterId, knowledgePointId } = getPageParams()
+  const { subjectId, mode, chapterId, knowledgePointId, startFrom } = getPageParams()
+  currentMode.value = (mode as string) || 'practice'
 
   loading.value = true
   try {
-    await questionStore.startSession({
+    // 构建请求参数
+    const params: Record<string, any> = {
       categoryId: examStore.currentCategoryId as CategoryId,
       subjectId: Number(subjectId) || 0,
       chapterId: chapterId ? Number(chapterId) : undefined,
       knowledgePointId: knowledgePointId ? Number(knowledgePointId) : undefined,
-      mode: (mode as any) || 'practice',
-    })
+      mode: currentMode.value,
+    }
 
-    // 获取科目名称
+    // 随机模式：固定题型数量
+    if (currentMode.value === 'random') {
+      params.singleCount = 40
+      params.multiCount = 20
+      params.trueFalseCount = 20
+    }
+
+    // 顺序刷题模式：从指定位置开始
+    if (currentMode.value === 'sequential' && startFrom) {
+      params.startFrom = Number(startFrom)
+    }
+
+    await questionStore.startSession(params as any)
+
     const subject = examStore.subjects.find(s => s.id === Number(subjectId))
     subjectName.value = subject?.name || '答题'
 
-    // 开始计时
-    resetTimer(TIMER.COUNTDOWN_SECONDS)
+    // 随机模式使用 30 分钟倒计时，其他模式 45 分钟
+    const timerSeconds = currentMode.value === 'random' ? RANDOM_EXAM_SECONDS : TIMER.COUNTDOWN_SECONDS
+    resetTimer(timerSeconds)
     startTimer()
   } catch (e) {
     console.error('加载答题会话失败:', e)
@@ -325,24 +346,51 @@ async function handleEndSession(): Promise<void> {
   await questionStore.endSession()
   stopTimer()
 
-  // 显示答题结果
   const { correct, total } = questionStore.progress
-  const accuracy = total > 0 ? Math.round((correct / total) * 100) : 0
 
-  uni.showModal({
-    title: '答题完成',
-    content: `正确率: ${accuracy}% (${correct}/${total})`,
-    confirmText: '返回首页',
-    cancelText: '查看错题',
-    success: (res) => {
-      if (res.confirm) {
-        uni.switchTab({ url: '/pages/index/index' })
-      } else {
-        uni.navigateTo({ url: '/subpackages/wrong-book/pages/index' })
+  if (currentMode.value === 'random') {
+    // 随机试卷：总分 100 分
+    // 单选 40 道 (各1分) + 多选 20 道 (各2分) + 判断 20 道 (各1分) = 100 分
+    const sessionQuestions = questionStore.session?.questions || []
+    let score = 0
+    sessionQuestions.forEach(q => {
+      const answer = questionStore.session?.answers[q.id]
+      if (answer?.isCorrect) {
+        score += q.type === 2 ? 2 : 1
       }
-      questionStore.reset()
-    },
-  })
+    })
+
+    uni.showModal({
+      title: '试卷提交完成',
+      content: `得分: ${score} / 100 分\n正确率: ${total > 0 ? Math.round((correct / total) * 100) : 0}% (${correct}/${total})`,
+      confirmText: '返回首页',
+      cancelText: '查看错题',
+      success: (res) => {
+        if (res.confirm) {
+          uni.switchTab({ url: '/pages/index/index' })
+        } else {
+          uni.navigateTo({ url: '/subpackages/wrong-book/pages/index' })
+        }
+        questionStore.reset()
+      },
+    })
+  } else {
+    const accuracy = total > 0 ? Math.round((correct / total) * 100) : 0
+    uni.showModal({
+      title: '答题完成',
+      content: `正确率: ${accuracy}% (${correct}/${total})`,
+      confirmText: '返回首页',
+      cancelText: '查看错题',
+      success: (res) => {
+        if (res.confirm) {
+          uni.switchTab({ url: '/pages/index/index' })
+        } else {
+          uni.navigateTo({ url: '/subpackages/wrong-book/pages/index' })
+        }
+        questionStore.reset()
+      },
+    })
+  }
 }
 
 /** 返回 */
