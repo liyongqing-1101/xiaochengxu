@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>高校教资刷题</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f6fa; color: #333; min-height: 100vh; }
+
+/* Header */
+.header { background: linear-gradient(135deg, #1677ff, #0958d9); color: #fff; padding: 16px 20px; text-align: center; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
+.header h1 { font-size: 18px; font-weight: 600; }
+.header .subtitle { font-size: 12px; opacity: 0.8; margin-top: 4px; }
+
+/* Container */
+.container { max-width: 600px; margin: 0 auto; padding: 16px; }
+
+/* Card */
+.card { background: #fff; border-radius: 12px; padding: 20px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+
+/* Select */
+.subject-grid { display: flex; flex-wrap: wrap; gap: 10px; }
+.subject-item { flex: 0 0 calc(50% - 5px); padding: 16px 12px; background: #f0f5ff; border: 2px solid transparent; border-radius: 10px; text-align: center; cursor: pointer; transition: all 0.2s; }
+.subject-item:hover { border-color: #1677ff; background: #e6f0ff; }
+.subject-item.active { border-color: #1677ff; background: #e6f0ff; }
+.subject-item .icon { font-size: 28px; margin-bottom: 6px; }
+.subject-item .name { font-size: 14px; font-weight: 500; }
+.subject-item .count { font-size: 11px; color: #999; margin-top: 2px; }
+
+/* Button */
+.btn { display: inline-block; padding: 12px 32px; border: none; border-radius: 8px; font-size: 16px; font-weight: 500; cursor: pointer; transition: all 0.2s; }
+.btn-primary { background: #1677ff; color: #fff; width: 100%; }
+.btn-primary:hover { background: #0958d9; }
+.btn-primary:disabled { background: #b0c4de; cursor: not-allowed; }
+.btn-outline { background: #fff; color: #1677ff; border: 1px solid #1677ff; }
+.btn-sm { padding: 6px 16px; font-size: 13px; }
+
+/* Question */
+.question-number { font-size: 13px; color: #999; margin-bottom: 8px; }
+.question-stem { font-size: 16px; line-height: 1.6; margin-bottom: 20px; font-weight: 500; }
+.option-list { display: flex; flex-direction: column; gap: 10px; }
+.option-item { display: flex; align-items: flex-start; gap: 10px; padding: 14px 16px; border: 2px solid #e8e8e8; border-radius: 10px; cursor: pointer; transition: all 0.2s; }
+.option-item:hover { border-color: #1677ff; background: #fafbff; }
+.option-item.selected { border-color: #1677ff; background: #e6f0ff; }
+.option-item.correct { border-color: #52c41a; background: #f6ffed; }
+.option-item.wrong { border-color: #ff4d4f; background: #fff2f0; }
+.option-label { width: 28px; height: 28px; border-radius: 50%; background: #f0f0f0; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 14px; flex-shrink: 0; }
+.option-item.selected .option-label { background: #1677ff; color: #fff; }
+.option-item.correct .option-label { background: #52c41a; color: #fff; }
+.option-item.wrong .option-label { background: #ff4d4f; color: #fff; }
+.option-text { flex: 1; line-height: 28px; }
+
+/* Result */
+.result-bar { display: flex; gap: 12px; text-align: center; margin-top: 16px; }
+.result-item { flex: 1; padding: 12px; border-radius: 8px; background: #f8f9fa; }
+.result-item .num { font-size: 24px; font-weight: 700; }
+.result-item .label { font-size: 12px; color: #999; margin-top: 4px; }
+.result-item.correct-num .num { color: #52c41a; }
+.result-item.wrong-num .num { color: #ff4d4f; }
+.result-item.total-num .num { color: #1677ff; }
+
+/* Explanation */
+.explanation { margin-top: 16px; padding: 14px; background: #fffbe6; border-radius: 8px; border-left: 3px solid #faad14; font-size: 14px; line-height: 1.6; }
+
+/* Navigation */
+.nav-row { display: flex; gap: 10px; margin-top: 20px; }
+.nav-row .btn { flex: 1; font-size: 14px; }
+
+/* Progress */
+.progress-bar { height: 4px; background: #e8e8e8; border-radius: 2px; margin-bottom: 16px; }
+.progress-fill { height: 100%; background: #1677ff; border-radius: 2px; transition: width 0.3s; }
+
+/* Status tags */
+.tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; margin-right: 4px; }
+.tag-type { background: #e6f0ff; color: #1677ff; }
+.tag-diff { background: #fff2e8; color: #fa8c16; }
+
+/* Login page */
+.login-card { max-width: 360px; margin: 60px auto; }
+.login-card h2 { text-align: center; margin-bottom: 24px; font-size: 20px; }
+.form-group { margin-bottom: 16px; }
+.form-group label { display: block; margin-bottom: 6px; font-size: 14px; color: #666; }
+.form-group input { width: 100%; padding: 12px 14px; border: 1px solid #d9d9d9; border-radius: 8px; font-size: 15px; outline: none; transition: border-color 0.2s; }
+.form-group input:focus { border-color: #1677ff; }
+.error-msg { color: #ff4d4f; font-size: 13px; margin-bottom: 12px; text-align: center; }
+.logout-btn { background: none; border: none; color: #fff; font-size: 13px; cursor: pointer; opacity: 0.8; position: absolute; right: 20px; top: 16px; }
+
+/* Loading */
+.loading { text-align: center; padding: 40px; color: #999; }
+.spinner { width: 32px; height: 32px; border: 3px solid #e8e8e8; border-top-color: #1677ff; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 12px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Empty */
+.empty { text-align: center; padding: 60px 20px; color: #999; }
+.empty .icon { font-size: 48px; margin-bottom: 12px; }
+
+/* Filter */
+.filter-row { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+.filter-row select { flex: 1; min-width: 80px; padding: 8px 10px; border: 1px solid #d9d9d9; border-radius: 6px; font-size: 13px; background: #fff; }
+
+/* Responsive */
+@media (max-width: 400px) {
+  .subject-item { flex: 0 0 100%; }
+  .container { padding: 12px; }
+  .card { padding: 16px; }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>📝 高校教资刷题</h1>
+  <div class="subtitle" id="headerSub">教师资格证考试题库</div>
+  <button class="logout-btn" id="logoutBtn" style="display:none" onclick="logout()">退出</button>
+</div>
+
+<div class="container" id="app"></div>
+
+<script>
+// ==================== App State ====================
+const state = {
+  token: localStorage.getItem('practice_token') || '',
+  nickname: localStorage.getItem('practice_nickname') || '',
+  questions: [],
+  currentIndex: 0,
+  selectedAnswers: {},
+  showResult: {},
+  score: { correct: 0, wrong: 0 },
+  subjects: [],
+  filterType: '',
+  filterDifficulty: ''
+};
+
+// ==================== API ====================
+async function api(path, options = {}) {
+  const headers = { 'Content-Type': 'application/json', ...options.headers };
+  if (state.token) headers['Authorization'] = 'Bearer ' + state.token;
+  const res = await fetch('/api' + path, { ...options, headers });
+  const data = await res.json();
+  if (data.code !== 0 && data.code !== undefined) {
+    throw new Error(data.message || '请求失败');
+  }
+  return data.data !== undefined ? data.data : data;
+}
+
+// ==================== Login ====================
+async function login(username, password) {
+  const data = await api('/admin/auth/login', {
+    method: 'POST',
+    body: JSON.stringify({ username, password })
+  });
+  state.token = data.token;
+  state.nickname = data.nickname;
+  localStorage.setItem('practice_token', data.token);
+  localStorage.setItem('practice_nickname', data.nickname);
+  document.getElementById('logoutBtn').style.display = 'block';
+  document.getElementById('headerSub').textContent = '欢迎，' + data.nickname;
+  await loadHome();
+}
+
+function logout() {
+  state.token = '';
+  state.nickname = '';
+  localStorage.removeItem('practice_token');
+  localStorage.removeItem('practice_nickname');
+  document.getElementById('logoutBtn').style.display = 'none';
+  document.getElementById('headerSub').textContent = '教师资格证考试题库';
+  renderLogin();
+}
+
+// ==================== Render ====================
+function renderLogin(errorMsg) {
+  document.getElementById('app').innerHTML = `
+    <div class="login-card card">
+      <h2>🔐 用户登录</h2>
+      ${errorMsg ? '<div class="error-msg">' + errorMsg + '</div>' : ''}
+      <div class="form-group">
+        <label>用户名</label>
+        <input type="text" id="loginUser" placeholder="请输入用户名" value="admin">
+      </div>
+      <div class="form-group">
+        <label>密码</label>
+        <input type="password" id="loginPass" placeholder="请输入密码" value="admin123" onkeyup="if(event.key==='Enter')doLogin()">
+      </div>
+      <button class="btn btn-primary" onclick="doLogin()">登 录</button>
+    </div>
+  `;
+}
+
+function doLogin() {
+  const u = document.getElementById('loginUser').value.trim();
+  const p = document.getElementById('loginPass').value.trim();
+  if (!u || !p) { renderLogin('请输入用户名和密码'); return; }
+  renderLoading();
+  login(u, p).catch(e => renderLogin(e.message));
+}
+
+function renderLoading() {
+  document.getElementById('app').innerHTML = '<div class="loading"><div class="spinner"></div><p>加载中...</p></div>';
+}
+
+// ==================== Home ====================
+async function loadHome() {
+  renderLoading();
+  try {
+    const categories = await api('/exam/categories');
+    const allSubjects = [];
+    (categories || []).forEach(cat => {
+      (cat.subjects || cat.examSubjects || []).forEach(sub => {
+        allSubjects.push({
+          id: sub.id,
+          name: sub.name,
+          icon: sub.icon || '📖',
+          totalQuestions: sub.totalQuestions || 0,
+          categoryName: cat.name
+        });
+      });
+    });
+    state.subjects = allSubjects;
+    renderHome();
+  } catch (e) {
+    renderLogin('登录已过期，请重新登录');
+  }
+}
+
+function renderHome() {
+  let html = '<div class="card"><h3 style="margin-bottom:12px">📚 选择科目</h3><div class="subject-grid">';
+  if (state.subjects.length === 0) {
+    html += '<div class="empty"><div class="icon">📭</div><p>暂无科目数据</p></div>';
+  } else {
+    state.subjects.forEach(s => {
+      html += `<div class="subject-item" onclick="startPractice(${s.id}, '${s.name}')">
+        <div class="icon">${s.icon}</div>
+        <div class="name">${s.name}</div>
+        <div class="count">${s.totalQuestions} 道题目</div>
+      </div>`;
+    });
+  }
+  html += '</div></div>';
+  document.getElementById('app').innerHTML = html;
+}
+
+// ==================== Practice ====================
+async function startPractice(subjectId, subjectName) {
+  renderLoading();
+  state.currentIndex = 0;
+  state.selectedAnswers = {};
+  state.showResult = {};
+  state.score = { correct: 0, wrong: 0 };
+
+  try {
+    const result = await api('/question/list?subjectId=' + subjectId + '&pageSize=100');
+    state.questions = result.list || [];
+    if (state.questions.length === 0) {
+      document.getElementById('app').innerHTML = `
+        <div class="card">
+          <div class="empty"><div class="icon">📭</div><p>「${subjectName}」暂无题目</p></div>
+          <button class="btn btn-outline" style="width:100%;margin-top:16px" onclick="loadHome()">返回科目列表</button>
+        </div>`;
+      return;
+    }
+    renderQuestion();
+  } catch (e) {
+    document.getElementById('app').innerHTML = `
+      <div class="card">
+        <div class="empty"><div class="icon">❌</div><p>加载失败：${e.message}</p></div>
+        <button class="btn btn-outline" style="width:100%;margin-top:16px" onclick="loadHome()">返回</button>
+      </div>`;
+  }
+}
+
+function renderQuestion() {
+  const q = state.questions[state.currentIndex];
+  if (!q) return;
+  const total = state.questions.length;
+  const idx = state.currentIndex + 1;
+  const progress = (idx / total) * 100;
+
+  const typeMap = { 1: '单选题', 2: '多选题', 3: '判断题' };
+  const diffMap = { 1: '简单', 2: '中等', 3: '困难' };
+  const options = [];
+  if (q.type === 3) {
+    options.push({ label: 'T', text: '正确 ✓' });
+    options.push({ label: 'F', text: '错误 ✗' });
+  } else {
+    if (q.optionA) options.push({ label: 'A', text: q.optionA });
+    if (q.optionB) options.push({ label: 'B', text: q.optionB });
+    if (q.optionC) options.push({ label: 'C', text: q.optionC });
+    if (q.optionD) options.push({ label: 'D', text: q.optionD });
+  }
+
+  const isSubmitted = state.showResult[q.id];
+  const selected = state.selectedAnswers[q.id] || [];
+  let answerDisplay = '';
+  try { answerDisplay = JSON.parse(q.answer || '[]'); } catch(e) { answerDisplay = [q.answer]; }
+
+  let html = '<div class="card">';
+  // Progress
+  html += `<div class="progress-bar"><div class="progress-fill" style="width:${progress}%"></div></div>`;
+  html += `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">`;
+  html += `<span class="question-number">第 ${idx}/${total} 题</span>`;
+  html += `<span><span class="tag tag-type">${typeMap[q.type] || '未知'}</span><span class="tag tag-diff">${diffMap[q.difficulty] || '中等'}</span></span>`;
+  html += `</div>`;
+
+  // Stem
+  html += `<div class="question-stem">${q.stem || ''}</div>`;
+
+  // Options
+  html += '<div class="option-list">';
+  options.forEach(opt => {
+    let cls = 'option-item';
+    if (isSubmitted) {
+      const isCorrectAnswer = answerDisplay.includes(opt.label);
+      const isSelected = selected.includes(opt.label);
+      if (isCorrectAnswer) cls += ' correct';
+      else if (isSelected) cls += ' wrong';
+    } else if (selected.includes(opt.label)) {
+      cls += ' selected';
+    }
+    html += `<div class="${cls}" onclick="${isSubmitted ? '' : "toggleOption('" + opt.label + "', " + q.id + ", " + q.type + ")"}">
+      <div class="option-label">${opt.label}</div>
+      <div class="option-text">${opt.text}</div>
+    </div>`;
+  });
+  html += '</div>';
+
+  // Submit button or result
+  if (!isSubmitted) {
+    html += `<button class="btn btn-primary" style="margin-top:20px" onclick="submitAnswer(${q.id})" ${selected.length === 0 ? 'disabled' : ''}>提交答案</button>`;
+  } else {
+    // Result
+    const isCorrect = arraysEqual(selected.sort(), answerDisplay.sort());
+    html += `<div style="margin-top:16px;padding:12px;border-radius:8px;text-align:center;font-weight:600;font-size:15px;${isCorrect ? 'background:#f6ffed;color:#52c41a' : 'background:#fff2f0;color:#ff4d4f'}">${isCorrect ? '✅ 回答正确！' : '❌ 回答错误！正确答案：' + answerDisplay.join(', ')}</div>`;
+
+    // Explanation
+    if (q.explanation) {
+      html += `<div class="explanation"><strong>📖 解析：</strong>${q.explanation}</div>`;
+    }
+
+    // Score
+    html += `<div class="result-bar">
+      <div class="result-item correct-num"><div class="num">${state.score.correct}</div><div class="label">正确</div></div>
+      <div class="result-item wrong-num"><div class="num">${state.score.wrong}</div><div class="label">错误</div></div>
+      <div class="result-item total-num"><div class="num">${idx}/${total}</div><div class="label">进度</div></div>
+    </div>`;
+
+    // Navigation
+    html += '<div class="nav-row">';
+    html += `<button class="btn btn-outline" onclick="loadHome()">📚 科目列表</button>`;
+    if (idx < total) {
+      html += `<button class="btn btn-primary" onclick="nextQuestion()">下一题 →</button>`;
+    } else {
+      html += `<button class="btn btn-primary" onclick="showFinalResult()">📊 查看成绩</button>`;
+    }
+    html += '</div>';
+  }
+
+  html += '</div>';
+  document.getElementById('app').innerHTML = html;
+}
+
+function toggleOption(label, qid, type) {
+  if (state.showResult[qid]) return;
+  let selected = state.selectedAnswers[qid] || [];
+  if (type === 2) {
+    // Multiple choice: toggle
+    const idx = selected.indexOf(label);
+    if (idx >= 0) selected.splice(idx, 1);
+    else selected.push(label);
+  } else {
+    // Single choice / True-false: replace
+    selected = [label];
+  }
+  state.selectedAnswers[qid] = selected;
+  renderQuestion();
+}
+
+function submitAnswer(qid) {
+  const q = state.questions[state.currentIndex];
+  const selected = state.selectedAnswers[qid] || [];
+  let answerArr = [];
+  try { answerArr = JSON.parse(q.answer || '[]'); } catch(e) { answerArr = [q.answer]; }
+
+  if (arraysEqual(selected.sort(), answerArr.sort())) {
+    state.score.correct++;
+  } else {
+    state.score.wrong++;
+  }
+  state.showResult[qid] = true;
+  renderQuestion();
+}
+
+function nextQuestion() {
+  state.currentIndex++;
+  renderQuestion();
+}
+
+function showFinalResult() {
+  const total = state.questions.length;
+  const correct = state.score.correct;
+  const rate = total > 0 ? Math.round((correct / total) * 100) : 0;
+  let emoji = rate >= 80 ? '🎉' : rate >= 60 ? '👍' : '💪';
+
+  document.getElementById('app').innerHTML = `
+    <div class="card" style="text-align:center">
+      <div style="font-size:56px;margin-bottom:12px">${emoji}</div>
+      <h2 style="margin-bottom:8px">练习完成！</h2>
+      <p style="color:#999;margin-bottom:20px">共 ${total} 题</p>
+      <div class="result-bar" style="margin-bottom:20px">
+        <div class="result-item correct-num"><div class="num">${correct}</div><div class="label">正确</div></div>
+        <div class="result-item wrong-num"><div class="num">${state.score.wrong}</div><div class="label">错误</div></div>
+        <div class="result-item"><div class="num" style="color:#722ed1">${rate}%</div><div class="label">正确率</div></div>
+      </div>
+      <button class="btn btn-primary" onclick="loadHome()">📚 返回科目列表</button>
+      <button class="btn btn-outline" style="width:100%;margin-top:10px" onclick="retryPractice()">🔄 重新练习</button>
+    </div>
+  `;
+}
+
+function retryPractice() {
+  if (state.questions.length > 0) {
+    state.currentIndex = 0;
+    state.selectedAnswers = {};
+    state.showResult = {};
+    state.score = { correct: 0, wrong: 0 };
+    renderQuestion();
+  } else {
+    loadHome();
+  }
+}
+
+// ==================== Utils ====================
+function arraysEqual(a, b) {
+  if (a.length !== b.length) return false;
+  return a.every((v, i) => v === b[i]);
+}
+
+// ==================== Init ====================
+if (state.token) {
+  document.getElementById('logoutBtn').style.display = 'block';
+  document.getElementById('headerSub').textContent = '欢迎，' + state.nickname;
+  loadHome();
+} else {
+  renderLogin();
+}
+</script>
+</body>
+</html>

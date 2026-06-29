@@ -10,6 +10,7 @@ export default defineConfig({
       dirs: ['src/components'],
       extensions: ['vue'],
       dts: 'src/types/components.d.ts',
+      exclude: [/^van-/],
     }),
   ],
   resolve: {

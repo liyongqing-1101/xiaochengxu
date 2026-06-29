@@ -1,3 +1,5 @@
+@use '@/styles/variables.scss' as v;
+
 /**
  * SCSS Mixins
  * 可复用的样式混入，通过 vite additionalData 自动注入
@@ -55,27 +57,27 @@
 }
 
 // 卡片样式
-@mixin card($padding: $card-padding, $radius: $radius-base) {
-  background: $color-bg-white;
+@mixin card($padding: v.$card-padding, $radius: v.$radius-base) {
+  background: v.$color-bg-white;
   border-radius: $radius;
   padding: $padding;
-  box-shadow: $shadow-sm;
+  box-shadow: v.$shadow-sm;
 }
 
 // 安全区域底部间距
 @mixin safe-area-bottom($extra: 0) {
-  padding-bottom: calc($tabbar-height + $safe-area-bottom + $extra);
+  padding-bottom: calc(v.$tabbar-height + v.$safe-area-bottom + $extra);
 }
 
 // 按压态
-@mixin active-state($bg: $color-primary-bg) {
+@mixin active-state($bg: v.$color-primary-bg) {
   &:active {
     background: $bg;
   }
 }
 
 // 1px 细线 (Retina 屏幕适配)
-@mixin hairline-border($color: $color-border, $direction: 'bottom') {
+@mixin hairline-border($color: v.$color-border, $direction: 'bottom') {
   position: relative;
   &::after {
     content: '';

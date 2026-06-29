@@ -1,9 +1,7 @@
 {
   "easycom": {
     "autoscan": true,
-    "custom": {
-      "^van-(.*)": "@vant/weapp/$1/index"
-    }
+    "custom": {}
   },
   "pages": [
     {
