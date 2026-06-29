@@ -29,11 +29,12 @@ export const useCategoryStore = defineStore('category', () => {
   const tags = ref<FlatTag[]>([])
 
   async function fetchCategoryTree(forceRefresh = false) {
-    if (!forceRefresh && tree.value.length > 0) return  // 已加载，跳过
+    // 每次都请求最新数据，不缓存
     loading.value = true
     try {
       const res = await getCategoryTree()
-      tree.value = res || []
+      const data = res || []
+      tree.value = data
 
       // 扁平化处理：从树形结构提取各级数据
       const subjList: FlatSubject[] = []
