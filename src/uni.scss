@@ -1,0 +1,47 @@
+/**
+ * uni.scss — UniApp 全局 SCSS 变量
+ * 此处定义的变量可在 uni-app 官方组件中使用
+ */
+
+/* 主题色 */
+$uni-color-primary: #4A90D9;
+$uni-color-success: #52C41A;
+$uni-color-warning: #FAAD14;
+$uni-color-error: #FF4D4F;
+
+/* 文字色 */
+$uni-text-color: #333333;
+$uni-text-color-inverse: #FFFFFF;
+$uni-text-color-grey: #999999;
+$uni-text-color-placeholder: #999999;
+$uni-text-color-disable: #C0C4CC;
+
+/* 背景色 */
+$uni-bg-color: #FFFFFF;
+$uni-bg-color-grey: #F5F7FA;
+$uni-bg-color-hover: #F0F2F5;
+$uni-bg-color-mask: rgba(0, 0, 0, 0.4);
+
+/* 边框色 */
+$uni-border-1: #E8E8E8;
+$uni-border-2: #F0F0F0;
+
+/* 间距 */
+$uni-spacing-sm: 16rpx;
+$uni-spacing-base: 24rpx;
+$uni-spacing-lg: 32rpx;
+
+/* 圆角 */
+$uni-border-radius-sm: 8rpx;
+$uni-border-radius-base: 16rpx;
+$uni-border-radius-lg: 24rpx;
+$uni-border-radius-circle: 50%;
+
+/* 字号 */
+$uni-font-size-sm: 24rpx;
+$uni-font-size-base: 28rpx;
+$uni-font-size-lg: 32rpx;
+$uni-font-size-xl: 36rpx;
+
+/* 图片 */
+$uni-img-path: '/static/images';

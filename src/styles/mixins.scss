@@ -1,0 +1,124 @@
+/**
+ * SCSS Mixins
+ * 可复用的样式混入，通过 vite additionalData 自动注入
+ */
+
+// Flexbox 快捷方式
+@mixin flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@mixin flex-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+@mixin flex-start {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+@mixin flex-column {
+  display: flex;
+  flex-direction: column;
+}
+
+@mixin flex-column-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+@mixin flex-wrap {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+// 文本截断
+@mixin text-ellipsis($lines: 1) {
+  @if $lines == 1 {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  } @else {
+    display: -webkit-box;
+    -webkit-line-clamp: $lines;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    word-break: break-all;
+  }
+}
+
+// 卡片样式
+@mixin card($padding: $card-padding, $radius: $radius-base) {
+  background: $color-bg-white;
+  border-radius: $radius;
+  padding: $padding;
+  box-shadow: $shadow-sm;
+}
+
+// 安全区域底部间距
+@mixin safe-area-bottom($extra: 0) {
+  padding-bottom: calc($tabbar-height + $safe-area-bottom + $extra);
+}
+
+// 按压态
+@mixin active-state($bg: $color-primary-bg) {
+  &:active {
+    background: $bg;
+  }
+}
+
+// 1px 细线 (Retina 屏幕适配)
+@mixin hairline-border($color: $color-border, $direction: 'bottom') {
+  position: relative;
+  &::after {
+    content: '';
+    position: absolute;
+    #{$direction}: 0;
+    left: 0;
+    width: 100%;
+    height: 1px;
+    background: $color;
+    transform: scaleY(0.5);
+    transform-origin: 0 0;
+  }
+}
+
+// 渐变背景
+@mixin gradient-bg($start, $end) {
+  background: linear-gradient(135deg, $start, $end);
+}
+
+// 滚动容器
+@mixin scroll-x {
+  display: flex;
+  overflow-x: auto;
+  white-space: nowrap;
+  -webkit-overflow-scrolling: touch;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@mixin scroll-y {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+// 绝对定位填充
+@mixin absolute-fill {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+}

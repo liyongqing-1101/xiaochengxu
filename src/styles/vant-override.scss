@@ -1,0 +1,132 @@
+/**
+ * Vant Weapp 主题覆盖
+ * 将 Vant 默认蓝色主题覆盖为浅色柔和风格
+ *
+ * 注意: Vant Weapp 使用 CSS 变量进行主题定制
+ * 微信小程序中通过 page { --xxx: value } 方式覆盖
+ */
+
+page {
+  // Primary 主题色覆盖
+  --van-blue: #4A90D9;
+  --van-primary-color: #4A90D9;
+  --van-button-primary-background-color: #4A90D9;
+  --van-button-primary-border-color: #4A90D9;
+
+  // 文字色
+  --van-text-color: #333333;
+  --van-text-color-2: #666666;
+  --van-text-color-3: #999999;
+
+  // 背景色
+  --van-background-color: #F5F7FA;
+  --van-background-color-light: #FAFBFC;
+  --van-white: #FFFFFF;
+
+  // 边框
+  --van-border-color: #E8E8E8;
+  --van-gray-3: #E8E8E8;
+
+  // 圆角
+  --van-radius-sm: 4px;
+  --van-radius-md: 8px;
+  --van-radius-lg: 12px;
+  --van-radius-max: 999px;
+
+  // 字号
+  --van-font-size-xs: 10px;
+  --van-font-size-sm: 12px;
+  --van-font-size-md: 14px;
+  --van-font-size-lg: 16px;
+
+  // TabBar
+  --van-tabbar-background-color: #FFFFFF;
+  --van-tabbar-item-active-color: #4A90D9;
+  --van-tabbar-item-inactive-color: #999999;
+  --van-tabbar-height: 50px;
+
+  // NavBar
+  --van-nav-bar-background-color: #FFFFFF;
+  --van-nav-bar-text-color: #1A1A1A;
+  --van-nav-bar-icon-color: #4A90D9;
+
+  // Toast
+  --van-toast-background-color: rgba(0, 0, 0, 0.7);
+  --van-toast-text-color: #FFFFFF;
+
+  // Dialog
+  --van-dialog-background-color: #FFFFFF;
+  --van-dialog-header-font-weight: 600;
+
+  // ActionSheet
+  --van-action-sheet-item-background: #FFFFFF;
+  --van-action-sheet-item-text-color: #333333;
+
+  // Search
+  --van-search-background-color: #F5F7FA;
+  --van-search-padding: 12px;
+
+  // Tag
+  --van-tag-primary-color: #4A90D9;
+  --van-tag-success-color: #52C41A;
+  --van-tag-warning-color: #FAAD14;
+  --van-tag-danger-color: #FF4D4F;
+
+  // Empty
+  --van-empty-description-color: #999999;
+
+  // Loading
+  --van-loading-spinner-color: #4A90D9;
+
+  // Popup
+  --van-popup-background-color: #FFFFFF;
+  --van-popup-round-radius: 16px;
+
+  // Overlay
+  --van-overlay-background-color: rgba(0, 0, 0, 0.5);
+}
+
+// Tab 样式覆盖
+.van-tab {
+  font-size: 28rpx !important;
+}
+
+.van-tab--active {
+  font-weight: 600 !important;
+  color: #4A90D9 !important;
+}
+
+// Cell 样式覆盖
+.van-cell {
+  padding: 24rpx 32rpx !important;
+  &__title {
+    font-size: 28rpx !important;
+  }
+  &__value {
+    font-size: 28rpx !important;
+  }
+}
+
+// Button 样式覆盖
+.van-button {
+  border-radius: 16rpx !important;
+  font-size: 28rpx !important;
+  &--primary {
+    background: $gradient-primary !important;
+    border: none !important;
+  }
+}
+
+// Search 样式覆盖
+.van-search {
+  padding: 16rpx 24rpx !important;
+  &__content {
+    border-radius: 32rpx !important;
+    background-color: #F0F2F5 !important;
+  }
+}
+
+// Popup 圆角
+.van-popup--bottom {
+  border-radius: 32rpx 32rpx 0 0 !important;
+}

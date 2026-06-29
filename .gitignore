@@ -1,0 +1,41 @@
+# 依赖
+node_modules/
+.unpackage/
+
+# 构建产物
+dist/
+target/
+*.class
+*.jar
+
+# 日志
+*.log
+
+# 系统文件
+.DS_Store
+Thumbs.db
+.env.local
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.swp
+*.swo
+
+# UniApp
+unpackage/
+
+# 后端
+backend/target/
+backend/*.jar
+!backend/Dockerfile
+
+# 管理后台
+admin-frontend/dist/
+admin-frontend/node_modules/
+
+# 临时文件
+/tmp/
+*.tmp
+wxjiaoziskills/

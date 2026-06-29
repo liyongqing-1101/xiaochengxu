@@ -1,0 +1,24 @@
+{
+  "name": "高校教资题库",
+  "appid": "__WEIXIN_APPID__",
+  "versionName": "1.0.0",
+  "versionCode": "100",
+  "mp-weixin": {
+    "appid": "__WEIXIN_APPID__",
+    "setting": {
+      "urlCheck": true,
+      "es6": true,
+      "minified": true,
+      "postcss": true
+    },
+    "usingComponents": true,
+    "permission": {
+      "scope.userInfo": {
+        "desc": "用于展示您的头像和昵称"
+      }
+    },
+    "requiredPrivateInfos": [],
+    "lazyCodeLoading": "requiredComponents",
+    "__usePrivacyCheck__": true
+  }
+}

@@ -1,0 +1,133 @@
+{
+  "easycom": {
+    "autoscan": true,
+    "custom": {
+      "^van-(.*)": "@vant/weapp/$1/index"
+    }
+  },
+  "pages": [
+    {
+      "path": "pages/index/index",
+      "style": {
+        "navigationBarTitleText": "高校教资题库",
+        "navigationStyle": "custom",
+        "enablePullDownRefresh": false
+      }
+    },
+    {
+      "path": "pages/login/index",
+      "style": {
+        "navigationBarTitleText": "登录",
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages/study/index",
+      "style": {
+        "navigationBarTitleText": "学习",
+        "enablePullDownRefresh": true
+      }
+    }
+  ],
+  "subPackages": [
+    {
+      "root": "subpackages/answer",
+      "pages": [
+        {
+          "path": "pages/index",
+          "style": {
+            "navigationBarTitleText": "答题",
+            "navigationStyle": "custom",
+            "disableScroll": true
+          }
+        }
+      ]
+    },
+    {
+      "root": "subpackages/wrong-book",
+      "pages": [
+        {
+          "path": "pages/index",
+          "style": {
+            "navigationBarTitleText": "错题本"
+          }
+        }
+      ]
+    },
+    {
+      "root": "subpackages/profile",
+      "pages": [
+        {
+          "path": "pages/index",
+          "style": {
+            "navigationBarTitleText": "我的",
+            "navigationStyle": "custom"
+          }
+        },
+        {
+          "path": "pages/favorites",
+          "style": {
+            "navigationBarTitleText": "我的收藏"
+          }
+        },
+        {
+          "path": "pages/history",
+          "style": {
+            "navigationBarTitleText": "练习记录"
+          }
+        },
+        {
+          "path": "pages/settings",
+          "style": {
+            "navigationBarTitleText": "设置"
+          }
+        }
+      ]
+    },
+    {
+      "root": "subpackages/placeholder",
+      "pages": [
+        {
+          "path": "pages/teaching-aid",
+          "style": {
+            "navigationBarTitleText": "教辅"
+          }
+        },
+        {
+          "path": "pages/community",
+          "style": {
+            "navigationBarTitleText": "社区"
+          }
+        }
+      ]
+    }
+  ],
+  "preloadRule": {
+    "pages/index/index": {
+      "network": "all",
+      "packages": ["subpackages/answer"]
+    },
+    "pages/study/index": {
+      "network": "wifi",
+      "packages": ["subpackages/answer", "subpackages/wrong-book"]
+    }
+  },
+  "tabBar": {
+    "custom": true,
+    "color": "#999999",
+    "selectedColor": "#4A90D9",
+    "list": [
+      { "pagePath": "pages/index/index", "text": "首页" },
+      { "pagePath": "pages/study/index", "text": "学习" },
+      { "pagePath": "subpackages/placeholder/pages/teaching-aid", "text": "教辅" },
+      { "pagePath": "subpackages/placeholder/pages/community", "text": "社区" },
+      { "pagePath": "subpackages/profile/pages/index", "text": "我的" }
+    ]
+  },
+  "globalStyle": {
+    "navigationBarTextStyle": "black",
+    "navigationBarTitleText": "高校教资题库",
+    "backgroundColor": "#F5F7FA",
+    "backgroundTextStyle": "light"
+  }
+}
