@@ -84,8 +84,6 @@
 import { ref } from 'vue'
 import { useUserStore } from '@/stores/user'
 
-const userStore = useUserStore()
-
 const username = ref('')
 const password = ref('')
 const confirmPassword = ref('')
@@ -107,6 +105,8 @@ function validate(): string | null {
 }
 
 async function handleRegister(): Promise<void> {
+  const userStore = useUserStore()
+  if (registering.value) return
   const error = validate()
   if (error) {
     uni.showToast({ title: error, icon: 'none' })

@@ -113,8 +113,6 @@
 import { ref } from 'vue'
 import { useUserStore } from '@/stores/user'
 
-const userStore = useUserStore()
-
 const loginMode = ref<'account' | 'wechat'>('account')
 const username = ref('')
 const password = ref('')
@@ -123,6 +121,7 @@ const loggingIn = ref(false)
 
 /** 账号密码登录 */
 async function handleAccountLogin(): Promise<void> {
+  const userStore = useUserStore()
   if (!username.value.trim()) {
     uni.showToast({ title: '请输入用户名', icon: 'none' })
     return
@@ -145,6 +144,7 @@ async function handleAccountLogin(): Promise<void> {
 
 /** 微信登录 */
 async function handleWechatLogin(): Promise<void> {
+  const userStore = useUserStore()
   loggingIn.value = true
   try {
     await userStore.login()
