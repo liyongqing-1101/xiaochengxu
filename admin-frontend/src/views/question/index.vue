@@ -83,8 +83,9 @@
 
     <!-- 编辑弹窗 -->
     <QuestionEditDialog
-      v-model:visible="questionStore.editVisible"
+      :visible="questionStore.editVisible"
       :question="questionStore.editingQuestion"
+      @close="questionStore.closeEditDialog()"
       @success="handleEditSuccess"
     />
   </div>
