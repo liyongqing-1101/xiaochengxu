@@ -4,12 +4,17 @@ import com.wxjiaozi.common.PageResult;
 import com.wxjiaozi.dto.mini.CheckInResultDTO;
 import com.wxjiaozi.dto.mini.LoginResultDTO;
 import com.wxjiaozi.dto.mini.PracticeHistoryDTO;
+import com.wxjiaozi.dto.mini.RegisterDTO;
 import com.wxjiaozi.dto.mini.UserStatsDTO;
 import com.wxjiaozi.dto.mini.LoginResultDTO.UserInfoDTO;
 
 public interface UserService {
 
     LoginResultDTO loginByWechat(String code);
+
+    void register(RegisterDTO dto);
+
+    LoginResultDTO loginByUsername(String username, String password);
 
     UserInfoDTO getUserInfo(Long userId);
 

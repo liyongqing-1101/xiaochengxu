@@ -1,6 +1,7 @@
 package com.wxjiaozi.service.impl;
 
 import cn.hutool.core.util.StrUtil;
+import cn.hutool.crypto.digest.BCrypt;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -12,6 +13,7 @@ import com.wxjiaozi.dto.mini.CheckInResultDTO;
 import com.wxjiaozi.dto.mini.LoginResultDTO;
 import com.wxjiaozi.dto.mini.LoginResultDTO.UserInfoDTO;
 import com.wxjiaozi.dto.mini.PracticeHistoryDTO;
+import com.wxjiaozi.dto.mini.RegisterDTO;
 import com.wxjiaozi.dto.mini.UserStatsDTO;
 import com.wxjiaozi.entity.User;
 import com.wxjiaozi.entity.UserAnswerRecord;
@@ -107,14 +109,78 @@ public class UserServiceImpl implements UserService {
 
         User user = userMapper.selectByOpenid(openid);
         if (user == null) {
-            user = new User();
-            user.setOpenid(openid);
-            user.setNickname("微信用户");
-            user.setStatus(1);
-            userMapper.insert(user);
+            throw new BusinessException("请先注册账号");
         }
 
         String token = jwtUtil.generateToken(user.getId(), openid, "USER");
+        String refreshToken = jwtUtil.generateRefreshToken(user.getId());
+
+        UserInfoDTO userInfo = new UserInfoDTO();
+        userInfo.setId(user.getId());
+        userInfo.setNickname(user.getNickname());
+        userInfo.setAvatar(user.getAvatar());
+        userInfo.setGender(user.getGender());
+        userInfo.setPhone(user.getPhone());
+        userInfo.setMembership(user.getMembership());
+
+        LoginResultDTO result = new LoginResultDTO();
+        result.setToken(token);
+        result.setRefreshToken(refreshToken);
+        result.setUserInfo(userInfo);
+        return result;
+    }
+
+    @Override
+    @Transactional
+    public void register(RegisterDTO dto) {
+        // 校验密码长度 8-18 位
+        if (dto.getPassword().length() < 8 || dto.getPassword().length() > 18) {
+            throw new BusinessException("密码长度需为8-18位");
+        }
+
+        // 校验两次密码一致
+        if (!dto.getPassword().equals(dto.getConfirmPassword())) {
+            throw new BusinessException("两次密码不一致");
+        }
+
+        // 校验用户名唯一
+        User existingUser = userMapper.selectByUsername(dto.getUsername());
+        if (existingUser != null) {
+            throw new BusinessException("用户名已存在");
+        }
+
+        // BCrypt 加密密码
+        String hashedPassword = BCrypt.hashpw(dto.getPassword());
+
+        // 创建用户
+        User user = new User();
+        user.setUsername(dto.getUsername());
+        user.setPassword(hashedPassword);
+        user.setNickname(dto.getUsername());
+        user.setStatus(1);
+        userMapper.insert(user);
+    }
+
+    @Override
+    public LoginResultDTO loginByUsername(String username, String password) {
+        // 查用户
+        User user = userMapper.selectByUsername(username);
+        if (user == null) {
+            throw new BusinessException("用户名或密码错误");
+        }
+
+        // 检查状态
+        if (user.getStatus() == null || user.getStatus() != 1) {
+            throw new BusinessException("账号已被禁用");
+        }
+
+        // 验证密码
+        if (!BCrypt.checkpw(password, user.getPassword())) {
+            throw new BusinessException("用户名或密码错误");
+        }
+
+        // 生成 JWT
+        String token = jwtUtil.generateToken(user.getId(), user.getOpenid(), "USER");
         String refreshToken = jwtUtil.generateRefreshToken(user.getId());
 
         UserInfoDTO userInfo = new UserInfoDTO();

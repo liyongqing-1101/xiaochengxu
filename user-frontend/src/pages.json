@@ -20,6 +20,13 @@
       }
     },
     {
+      "path": "pages/register/index",
+      "style": {
+        "navigationBarTitleText": "注册",
+        "navigationStyle": "custom"
+      }
+    },
+    {
       "path": "pages/study/index",
       "style": {
         "navigationBarTitleText": "学习",

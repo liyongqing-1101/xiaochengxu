@@ -146,6 +146,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { onShow } from '@dcloudio/uni-app'
 import { useUserStore } from '@/stores/user'
 import { useExamStore } from '@/stores/exam'
 import { useWrongBookStore } from '@/stores/wrongBook'
@@ -313,6 +314,13 @@ function handleRandomStart(): void {
 
 onMounted(() => {
   loadPageData()
+})
+
+onShow(() => {
+  // tabBar 页面切换时检查登录状态
+  if (!userStore.isLoggedIn) {
+    uni.reLaunch({ url: '/pages/login/index' })
+  }
 })
 </script>
 

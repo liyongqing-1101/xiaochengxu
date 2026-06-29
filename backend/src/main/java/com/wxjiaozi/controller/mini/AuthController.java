@@ -3,6 +3,8 @@ package com.wxjiaozi.controller.mini;
 import com.wxjiaozi.common.Result;
 import com.wxjiaozi.dto.mini.LoginDTO;
 import com.wxjiaozi.dto.mini.LoginResultDTO;
+import com.wxjiaozi.dto.mini.RegisterDTO;
+import com.wxjiaozi.dto.mini.UsernameLoginDTO;
 import com.wxjiaozi.security.JwtUtil;
 import com.wxjiaozi.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -31,6 +33,23 @@ public class AuthController {
     @Operation(summary = "微信登录")
     public Result<LoginResultDTO> login(@RequestBody @Valid LoginDTO loginDTO) {
         LoginResultDTO result = userService.loginByWechat(loginDTO.getCode());
+        return Result.ok(result);
+    }
+
+    @PostMapping("/register")
+    @Operation(summary = "用户名密码注册")
+    public Result<Void> register(@RequestBody @Valid RegisterDTO registerDTO) {
+        userService.register(registerDTO);
+        return Result.ok();
+    }
+
+    @PostMapping("/login/username")
+    @Operation(summary = "用户名密码登录")
+    public Result<LoginResultDTO> loginByUsername(@RequestBody @Valid UsernameLoginDTO loginDTO) {
+        LoginResultDTO result = userService.loginByUsername(
+            loginDTO.getUsername(),
+            loginDTO.getPassword()
+        );
         return Result.ok(result);
     }
 

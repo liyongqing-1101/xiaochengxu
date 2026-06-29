@@ -126,7 +126,9 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { onShow } from '@dcloudio/uni-app'
 import { useExamStore } from '@/stores/exam'
+import { useUserStore } from '@/stores/user'
 import type { Chapter, Subject } from '@/types/exam'
 import type { Question } from '@/types/question'
 import type { PaginatedParams } from '@/types/api'
@@ -232,6 +234,13 @@ function handleTabChange(path: string): void {
 
 onMounted(() => {
   loadQuestions(true)
+})
+
+onShow(() => {
+  const userStore = useUserStore()
+  if (!userStore.isLoggedIn) {
+    uni.reLaunch({ url: '/pages/login/index' })
+  }
 })
 </script>
 

@@ -4,8 +4,8 @@ import type { Gender } from './enums'
 export interface UserInfo {
   /** 用户ID */
   id: number
-  /** 微信openid */
-  openid: string
+  /** 微信openid（用户名注册用户可能没有） */
+  openid?: string
   /** 昵称 */
   nickname: string
   /** 头像URL */

@@ -95,11 +95,13 @@ CREATE TABLE IF NOT EXISTS exam_question (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='题目';
 
 -- ============================================================
--- 6. 微信用户
+-- 6. 用户（支持微信登录 + 用户名密码登录）
 -- ============================================================
 CREATE TABLE IF NOT EXISTS user (
     id          BIGINT PRIMARY KEY AUTO_INCREMENT,
-    openid      VARCHAR(64) NOT NULL UNIQUE COMMENT '微信OpenID',
+    openid      VARCHAR(64) NULL UNIQUE COMMENT '微信OpenID',
+    username    VARCHAR(50) NULL UNIQUE COMMENT '登录用户名',
+    password    VARCHAR(200) NULL COMMENT 'BCrypt加密密码',
     nickname    VARCHAR(100) COMMENT '用户昵称',
     avatar      VARCHAR(500) COMMENT '头像URL',
     gender      TINYINT DEFAULT 0 COMMENT '性别: 0未知 1男 2女',
@@ -108,7 +110,7 @@ CREATE TABLE IF NOT EXISTS user (
     status      TINYINT DEFAULT 1 COMMENT '状态: 0禁用 1正常',
     created_at  DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at  DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='微信用户';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户';
 
 -- ============================================================
 -- 7. 答题记录

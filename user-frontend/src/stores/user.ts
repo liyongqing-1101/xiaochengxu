@@ -91,6 +91,29 @@ export const useUserStore = defineStore('user', () => {
   }
 
   /**
+   * 用户名密码登录
+   */
+  async function loginByPassword(username: string, password: string): Promise<void> {
+    const { authApi } = await import('@/api/modules/auth')
+    const result = await authApi.loginByUsername(username, password)
+
+    token.value = result.token
+    userInfo.value = result.userInfo
+
+    // 持久化
+    storage.set(StorageKey.TOKEN, result.token)
+    storage.set(StorageKey.USER_INFO, result.userInfo)
+  }
+
+  /**
+   * 用户注册
+   */
+  async function register(username: string, password: string, confirmPassword: string): Promise<void> {
+    const { authApi } = await import('@/api/modules/auth')
+    await authApi.register(username, password, confirmPassword)
+  }
+
+  /**
    * 获取用户信息
    */
   async function fetchUserInfo(): Promise<void> {
@@ -183,6 +206,8 @@ export const useUserStore = defineStore('user', () => {
     // actions
     restoreSession,
     login,
+    loginByPassword,
+    register,
     fetchUserInfo,
     fetchStats,
     checkIn,

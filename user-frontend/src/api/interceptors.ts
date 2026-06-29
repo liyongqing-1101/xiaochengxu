@@ -15,6 +15,12 @@ import type { ApiResponse } from '@/types/api'
 /** 拦截器是否已注册 */
 let registered = false
 
+/** 无需登录即可访问的页面 */
+const PUBLIC_PAGES = [
+  '/pages/login/index',
+  '/pages/register/index',
+]
+
 /**
  * 注册全局请求拦截器
  * 应在 App.vue onLaunch 中调用一次
@@ -66,6 +72,9 @@ export function registerInterceptors(): void {
     },
   })
 
+  // --- 导航拦截: 未登录自动跳转登录页 ---
+  registerNavigationGuards()
+
   // --- 响应拦截 (通过包装 uni.request 实现) ---
   wrapRequestWithResponseInterceptor()
 }
@@ -112,6 +121,29 @@ function wrapRequestWithResponseInterceptor(): void {
 
     return originalRequest(options)
   } as typeof uni.request
+}
+
+/**
+ * 注册导航拦截器：未登录用户访问非公开页面时跳转到登录页
+ */
+function registerNavigationGuards(): void {
+  const guard = (args: any): boolean | void => {
+    const userStore = useUserStore()
+    if (userStore.isLoggedIn) return
+
+    const url = args.url || ''
+    // 提取路径部分（去掉查询参数）
+    const path = url.split('?')[0]
+
+    if (!PUBLIC_PAGES.includes(path)) {
+      uni.reLaunch({ url: '/pages/login/index' })
+      return false // 中止导航
+    }
+  }
+
+  uni.addInterceptor('navigateTo', { invoke: guard })
+  uni.addInterceptor('redirectTo', { invoke: guard })
+  uni.addInterceptor('reLaunch', { invoke: guard })
 }
 
 /**

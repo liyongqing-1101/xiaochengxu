@@ -97,6 +97,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted } from 'vue'
+import { onShow } from '@dcloudio/uni-app'
 import { useUserStore } from '@/stores/user'
 import { useWrongBookStore } from '@/stores/wrongBook'
 import { useCheckIn } from '@/composables/useCheckIn'
@@ -159,6 +160,12 @@ function handleLogout(): void {
 onMounted(() => {
   userStore.fetchStats()
   wrongBookStore.loadFromStorage()
+})
+
+onShow(() => {
+  if (!userStore.isLoggedIn) {
+    uni.reLaunch({ url: '/pages/login/index' })
+  }
 })
 </script>
 
