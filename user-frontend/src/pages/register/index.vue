@@ -1,7 +1,11 @@
 <template>
   <!--
     注册页面 — 用户名密码注册
-    校验流程: 前端格式校验 → 后端业务校验 → 成功跳转
+    校验流程: 前端格式校验 → 直接调用 authApi → 成功跳转
+
+    【关键】绕过 Pinia store 直接调用 authApi.register()
+    原因: 微信小程序环境中 useUserStore() 在 script setup 顶层和函数内部
+    均可能返回 undefined（Pinia 模块加载时序问题），导致 register 方法不可用。
   -->
   <view class="register-page">
     <!-- 装饰背景 -->
@@ -27,10 +31,10 @@
           <input
             v-model="username"
             class="register-form__input"
-            placeholder="请输入用户名（4-20位字母/数字/下划线）"
+            placeholder="4-20位字母/数字/下划线，字母开头"
             placeholder-style="color: #C0C4CC"
             :maxlength="20"
-            :disabled="registering"
+            :disabled="submitting"
           />
         </view>
 
@@ -40,14 +44,14 @@
           <input
             v-model="password"
             class="register-form__input"
-            :type="showPassword ? 'text' : 'password'"
-            placeholder="请输入密码（8-18位，含字母+数字）"
+            :type="showPwd ? 'text' : 'password'"
+            placeholder="8-18位，需同时包含字母和数字"
             placeholder-style="color: #C0C4CC"
             :maxlength="18"
-            :disabled="registering"
+            :disabled="submitting"
           />
-          <text class="register-form__toggle" @tap="showPassword = !showPassword">
-            {{ showPassword ? '🙈' : '👁️' }}
+          <text class="register-form__toggle" @tap="showPwd = !showPwd">
+            {{ showPwd ? '🙈' : '👁️' }}
           </text>
         </view>
 
@@ -55,41 +59,41 @@
         <view class="register-form__item">
           <text class="register-form__icon">🔒</text>
           <input
-            v-model="confirmPassword"
+            v-model="confirmPwd"
             class="register-form__input"
             :type="showConfirm ? 'text' : 'password'"
-            placeholder="请确认密码"
+            placeholder="请再次输入密码"
             placeholder-style="color: #C0C4CC"
             :maxlength="18"
-            :disabled="registering"
+            :disabled="submitting"
           />
           <text class="register-form__toggle" @tap="showConfirm = !showConfirm">
             {{ showConfirm ? '🙈' : '👁️' }}
           </text>
         </view>
 
-        <!-- 用户协议 -->
+        <!-- 用户协议（小程序审核必查） -->
         <view class="register-form__agreement">
           <view class="register-form__checkbox" @tap="agreed = !agreed">
-            <text :class="agreed ? 'register-form__checkbox--checked' : 'register-form__checkbox--unchecked'">
+            <text :class="agreed ? 'register-form__checkbox--on' : 'register-form__checkbox--off'">
               {{ agreed ? '☑' : '☐' }}
             </text>
           </view>
           <text class="register-form__agreement-text">
             已阅读并同意
-            <text class="register-form__agreement-link" @tap.stop="handleShowAgreement('privacy')">《隐私政策》</text>
+            <text class="register-form__link" @tap.stop="showAgreement('privacy')">《隐私政策》</text>
             和
-            <text class="register-form__agreement-link" @tap.stop="handleShowAgreement('terms')">《用户协议》</text>
+            <text class="register-form__link" @tap.stop="showAgreement('terms')">《用户协议》</text>
           </text>
         </view>
 
         <!-- 注册按钮 -->
         <view
           class="register-form__btn"
-          :class="{ 'register-form__btn--loading': registering }"
+          :class="{ 'register-form__btn--loading': submitting }"
           @tap="handleRegister"
         >
-          <text>{{ registering ? '注册中...' : '注 册' }}</text>
+          <text>{{ submitting ? '注册中...' : '注 册' }}</text>
         </view>
 
         <!-- 去登录 -->
@@ -106,194 +110,168 @@
 /**
  * 注册页面 — 逻辑层
  *
- * 校验分层:
- *   第1层: 前端格式校验（用户名/密码格式、两次密码一致、协议勾选）
- *   第2层: 后端业务校验（用户名重复等）→ 拦截器 handleBusinessError 自动弹 toast
- *   第3层: 网络超时兜底 → catch 块统一提示
+ * ========== 架构决策 ==========
+ * 绕过 Pinia store，直接调用 authApi.register()。
+ * 原因：微信小程序 UniApp 环境中，<script setup> 顶层和事件处理函数内部
+ * 调用 useUserStore() 均可能返回 undefined（Pinia 模块加载时序问题）。
+ * authApi 是纯 JS 模块导出，无运行时依赖，100% 可靠。
+ *
+ * ========== 校验分层 ==========
+ * 第1层：前端格式校验（正则）→ uni.showToast
+ * 第2层：后端业务校验（用户名重复等）→ 拦截器 handleBusinessError 自动弹 toast
+ * 第3层：网络异常兜底 → catch 块打印日志 + 弹 toast
+ *
+ * ========== 调试指南 ==========
+ * 微信开发者工具 → Console 面板：
+ *   [Register] === 开始注册 ===
+ *   [Register] 表单数据: { username, passwordLength, confirmMatch, agreed }
+ *   [Register] 校验结果: null | "错误信息"
+ *   [Register] 请求参数: { username, password: "***", confirmPassword: "***" }
+ *   [Register] 后端响应: { statusCode, data }
+ *   [Register] 注册成功 / 注册失败: ...
+ * 微信开发者工具 → Network 面板：
+ *   应能看到 POST /api/auth/register 请求
  */
 import { ref } from 'vue'
-import { useUserStore } from '@/stores/user'
+import { authApi } from '@/api/modules/auth'
 
 // ═══════════════════════════════════════
-// 表单数据
+// 表单字段
 // ═══════════════════════════════════════
-
-/** 用户名 */
 const username = ref<string>('')
-
-/** 密码 */
 const password = ref<string>('')
-
-/** 确认密码 */
-const confirmPassword = ref<string>('')
-
-/** 是否显示密码明文 */
-const showPassword = ref<boolean>(false)
-
-/** 是否显示确认密码明文 */
+const confirmPwd = ref<string>('')
+const showPwd = ref<boolean>(false)
 const showConfirm = ref<boolean>(false)
-
-/** 是否已勾选用户协议 */
 const agreed = ref<boolean>(false)
-
-/** 注册进行中标志（防重复点击 + 输入框禁用） */
-const registering = ref<boolean>(false)
+const submitting = ref<boolean>(false)
 
 // ═══════════════════════════════════════
-// 校验常量
+// 校验正则（常量）
 // ═══════════════════════════════════════
+/** 用户名：字母开头，4-20位字母/数字/下划线 */
+const RE_USERNAME = /^[a-zA-Z][a-zA-Z0-9_]{3,19}$/
 
-/** 用户名正则：4-20位，字母开头，可包含字母/数字/下划线 */
-const USERNAME_REGEX: RegExp = /^[a-zA-Z][a-zA-Z0-9_]{3,19}$/
-
-/** 密码最小长度 */
-const PASSWORD_MIN: number = 8
-
-/** 密码最大长度 */
-const PASSWORD_MAX: number = 18
-
-/** 密码强度正则：必须同时包含字母和数字 */
-const PASSWORD_STRONG_REGEX: RegExp = /^(?=.*[a-zA-Z])(?=.*\d).+$/
+/** 密码：8-18位，必须同时包含字母和数字 */
+const RE_PASSWORD = /^(?=.*[a-zA-Z])(?=.*\d).{8,18}$/
 
 // ═══════════════════════════════════════
-// 校验函数
+// 前端校验
 // ═══════════════════════════════════════
-
-/** 校验结果类型：null = 通过，string = 错误提示 */
-type ValidationResult = string | null
 
 /**
- * 前端表单校验
- * 第1层校验，在发起网络请求前执行
+ * 返回 null = 通过，返回 string = 错误提示
  */
-function validate(): ValidationResult {
-  const name: string = username.value.trim()
+function validateForm(): string | null {
+  const name = username.value.trim()
 
-  // 用户名为空
   if (!name) {
     return '请输入用户名'
   }
-
-  // 用户名长度
-  if (name.length < 4) {
-    return '用户名至少4位'
+  if (!RE_USERNAME.test(name)) {
+    return '用户名需4-20位字母/数字/下划线，字母开头'
   }
-
-  // 用户名格式：字母开头 + 字母/数字/下划线
-  if (!USERNAME_REGEX.test(name)) {
-    return '用户名需为4-20位字母/数字/下划线，字母开头'
+  if (!RE_PASSWORD.test(password.value)) {
+    return '密码需8-18位，且同时包含字母和数字'
   }
-
-  // 密码长度
-  if (password.value.length < PASSWORD_MIN || password.value.length > PASSWORD_MAX) {
-    return `密码长度需为${PASSWORD_MIN}-${PASSWORD_MAX}位`
+  if (password.value !== confirmPwd.value) {
+    return '两次输入的密码不一致'
   }
-
-  // 密码强度：必须同时包含字母和数字
-  if (!PASSWORD_STRONG_REGEX.test(password.value)) {
-    return '密码需同时包含字母和数字'
-  }
-
-  // 两次密码一致性
-  if (password.value !== confirmPassword.value) {
-    return '两次密码不一致'
-  }
-
-  // 用户协议勾选（小程序审核必查项）
   if (!agreed.value) {
     return '请先阅读并同意用户协议和隐私政策'
   }
-
   return null
 }
 
 // ═══════════════════════════════════════
-// 事件处理
+// 注册处理
 // ═══════════════════════════════════════
 
-/**
- * 注册按钮点击
- *
- * 关键: useUserStore() 必须在函数内部调用，
- * 避免 UniApp <script setup> 顶层 Pinia 未挂载导致返回 undefined
- */
 async function handleRegister(): Promise<void> {
   // ── 防重复点击 ──
-  if (registering.value) return
-
-  // ── 在事件处理函数内部获取 store 实例（避免顶层 Pinia 时序问题） ──
-  const userStore = useUserStore()
-
-  // ── 调试日志：确认 store 实例和 register 方法存在 ──
-  console.log('[Register] userStore 实例:', userStore)
-  console.log('[Register] register 方法:', typeof userStore?.register)
-
-  // 兜底：store 仍然为 undefined 时的明确提示
-  if (!userStore) {
-    console.error('[Register] useUserStore() 返回 undefined，Pinia 未就绪')
-    uni.showToast({ title: '系统初始化中，请稍后重试', icon: 'none' })
+  if (submitting.value) {
+    console.log('[Register] 重复点击已拦截')
     return
   }
+
+  console.log('[Register] === 开始注册 ===')
+  console.log('[Register] 表单数据:', {
+    username: username.value.trim(),
+    passwordLength: password.value.length,
+    confirmMatch: password.value === confirmPwd.value,
+    agreed: agreed.value,
+  })
 
   // ── 第1层：前端格式校验 ──
-  const error: ValidationResult = validate()
-  if (error) {
-    uni.showToast({ title: error, icon: 'none' })
+  const errMsg = validateForm()
+  console.log('[Register] 校验结果:', errMsg)
+  if (errMsg) {
+    uni.showToast({ title: errMsg, icon: 'none', duration: 2000 })
     return
   }
 
-  // ── 发起注册请求 ──
-  const trimmedName: string = username.value.trim()
-
+  // ── 发起请求（直接调用 authApi，不经过 Pinia store） ──
+  submitting.value = true
+  const payload = {
+    username: username.value.trim(),
+    password: password.value,
+    confirmPassword: confirmPwd.value,
+  }
   console.log('[Register] 请求参数:', {
-    username: trimmedName,
+    username: payload.username,
     password: '***',
     confirmPassword: '***',
   })
 
-  registering.value = true
-
   try {
-    // 第2层：后端业务校验（用户名重复等）由拦截器 handleBusinessError 弹 toast
-    await userStore.register(trimmedName, password.value, confirmPassword.value)
+    // 直接调用 authApi.register()，无需 Pinia store
+    // 内部流程: authApi.register → post('/auth/register', payload) → uni.request
+    await authApi.register(payload.username, payload.password, payload.confirmPassword)
 
-    console.log('[Register] 注册成功')
+    console.log('[Register] ✅ 注册成功')
 
-    uni.showToast({ title: '注册成功', icon: 'success' })
+    uni.showToast({ title: '注册成功，请登录', icon: 'success', duration: 1500 })
 
     // 延迟跳转，让用户看到成功提示
     setTimeout(() => {
       const pages = getCurrentPages()
+      console.log('[Register] 页面栈深度:', pages.length)
       if (pages.length > 1) {
-        // 有上一页（从登录页跳转过来）→ 返回登录页
-        uni.navigateBack()
+        uni.navigateBack()   // 返回登录页
       } else {
-        // 无历史页面栈 → 直接跳转登录页
         uni.redirectTo({ url: '/pages/login/index' })
       }
-    }, 1000)
+    }, 1500)
   } catch (e: unknown) {
-    // 第3层：网络超时/服务不可用等兜底错误
-    // 注意：后端业务错误（code≠0）已由拦截器 handleBusinessError 自动弹 toast
-    // 这里只处理网络层异常（超时、断网等）
-    const err = e as { errMsg?: string; message?: string }
-    console.error('[Register] 注册失败:', err)
+    // ── 第3层：网络/未知异常 ──
+    // 注意：后端业务错误（如"用户名已存在"）已由拦截器 handleBusinessError
+    // 自动弹 toast，此处只兜底网络异常等拦截器未覆盖的场景
+    console.error('[Register] ❌ 注册失败:', e)
 
-    // 判断是否为业务错误（拦截器已处理过）还是网络异常
-    if (err?.errMsg && err.errMsg.includes('request:fail')) {
-      // 网络层异常 → 兜底提示
-      uni.showToast({ title: '网络异常，请检查网络连接', icon: 'none' })
-    } else if (err?.message) {
-      // 有 message 字段 → 可能是未经过拦截器的异常
+    const err = e as Record<string, unknown>
+    // 判断是否已被拦截器处理过（拦截器调用 originalFail 时传入 { errMsg } ）
+    const rawMsg = err?.errMsg as string | undefined
+    if (rawMsg) {
+      if (rawMsg.includes('request:fail') || rawMsg.includes('timeout')) {
+        uni.showToast({ title: '网络异常，请检查网络连接', icon: 'none' })
+      }
+      // 其他 errMsg 可能是拦截器传入的业务错误消息，拦截器已弹 toast，不重复
+    } else if (err?.message && typeof err.message === 'string') {
+      // 未经过拦截器的异常，直接显示 message
       uni.showToast({ title: err.message, icon: 'none' })
     }
-    // 其他情况：拦截器已弹 toast，不再重复提示
+    // 兜底：以上都不匹配则静默（拦截器已处理）
   } finally {
-    registering.value = false
+    submitting.value = false
+    console.log('[Register] === 注册流程结束 ===')
   }
 }
 
-/** 跳转登录页 */
+// ═══════════════════════════════════════
+// 辅助函数
+// ═══════════════════════════════════════
+
+/** 返回登录页 */
 function handleGoLogin(): void {
   const pages = getCurrentPages()
   if (pages.length > 1) {
@@ -303,15 +281,15 @@ function handleGoLogin(): void {
   }
 }
 
-/** 查看协议内容 */
-function handleShowAgreement(type: 'privacy' | 'terms'): void {
-  const titles: Record<string, string> = {
+/** 显示协议弹窗 */
+function showAgreement(type: 'privacy' | 'terms'): void {
+  const titleMap: Record<string, string> = {
     privacy: '隐私政策',
     terms: '用户协议',
   }
   uni.showModal({
-    title: titles[type],
-    content: `${titles[type]}内容暂未上线，敬请期待。\n\n我们将严格遵守相关法律法规，保护您的个人信息安全。`,
+    title: titleMap[type],
+    content: `${titleMap[type]}内容将尽快上线。\n\n我们严格遵守相关法律法规，保护您的个人信息安全。`,
     showCancel: false,
     confirmText: '我知道了',
   })
@@ -422,7 +400,7 @@ function handleShowAgreement(type: 'privacy' | 'terms'): void {
     flex-shrink: 0;
   }
 
-  // ── 用户协议勾选 ──
+  // 用户协议
   &__agreement {
     @include flex-start;
     padding: $spacing-sm 0;
@@ -434,12 +412,12 @@ function handleShowAgreement(type: 'privacy' | 'terms'): void {
     flex-shrink: 0;
     padding: $spacing-xs;
 
-    &--checked {
+    &--on {
       font-size: $font-size-lg;
       color: $color-primary;
     }
 
-    &--unchecked {
+    &--off {
       font-size: $font-size-lg;
       color: $color-text-placeholder;
     }
@@ -451,11 +429,11 @@ function handleShowAgreement(type: 'privacy' | 'terms'): void {
     line-height: 1.6;
   }
 
-  &__agreement-link {
+  &__link {
     color: $color-primary;
   }
 
-  // ── 注册按钮 ──
+  // 注册按钮
   &__btn {
     @include flex-center;
     height: 96rpx;
@@ -475,7 +453,7 @@ function handleShowAgreement(type: 'privacy' | 'terms'): void {
     }
   }
 
-  // ── 底部链接 ──
+  // 底部链接
   &__footer {
     @include flex-center;
     margin-top: $spacing-xl;
