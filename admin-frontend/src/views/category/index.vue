@@ -182,10 +182,12 @@ function handleNodeClick(node: any) {
 }
 
 function getNodeType(node: any): string {
-  // 根据存在的字段推断类型
-  if (node.examSubjects !== undefined || node.subjects !== undefined) return 'category'
-  if (node.examChapters !== undefined || node.chapters !== undefined) return 'subject'
-  if (node.examTags !== undefined || node.tags !== undefined) return 'chapter'
+  // 优先使用 CategoryTree 传递的 _type 字段
+  if (node._type) return node._type
+  // fallback: 根据存在的字段推断
+  if (node.examSubjects !== undefined) return 'category'
+  if (node.examChapters !== undefined) return 'subject'
+  if (node.examTags !== undefined) return 'chapter'
   return 'tag'
 }
 

@@ -142,7 +142,8 @@ function childTypeLabel(type: string) {
 // 单击节点：选中并查看详情
 function handleNodeClick(data: any) {
   closeContextMenu()
-  emit('node-click', data.raw)
+  // 传递完整的节点数据（包含 type 信息）
+  emit('node-click', { ...data.raw, _type: data.type })
 }
 
 // 右键菜单
@@ -167,13 +168,13 @@ function handleMenuAdd() {
     closeContextMenu()
     return
   }
-  emit('add', contextMenu.data.raw)
+  emit('add', { ...contextMenu.data.raw, _type: contextMenu.data.type })
   closeContextMenu()
 }
 
 function handleMenuEdit() {
   if (!contextMenu.data) return
-  emit('edit', contextMenu.data.raw)
+  emit('edit', { ...contextMenu.data.raw, _type: contextMenu.data.type })
   closeContextMenu()
 }
 
@@ -183,7 +184,7 @@ function handleMenuDelete() {
   ElMessageBox.confirm(`确定要删除「${data.label}」吗？删除后子分类也会一并删除。`, '确认删除', {
     type: 'warning',
   }).then(() => {
-    emit('delete', data.raw)
+    emit('delete', { ...data.raw, _type: data.type })
   }).catch(() => {})
   closeContextMenu()
 }
