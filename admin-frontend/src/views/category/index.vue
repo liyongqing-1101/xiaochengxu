@@ -307,10 +307,13 @@ async function doUpdate() {
 }
 
 async function handleDelete(node: any) {
-  // 此函数由 CategoryTree 的 delete 事件触发，但删除确认已在 CategoryTree 中完成
-  // 这里实际执行删除
   const type = getNodeType(node)
   const id = node.id
+
+  if (!id) {
+    ElMessage.error('节点ID不存在')
+    return
+  }
 
   try {
     if (type === 'category') {
@@ -321,6 +324,9 @@ async function handleDelete(node: any) {
       await deleteChapter(id)
     } else if (type === 'tag') {
       await deleteTag(id)
+    } else {
+      ElMessage.error('未知节点类型: ' + type)
+      return
     }
     ElMessage.success('删除成功')
     categoryStore.tree = []
@@ -328,11 +334,11 @@ async function handleDelete(node: any) {
     if (treeRef.value) {
       treeRef.value.loadTreeData()
     }
-    // 如果删除的是当前选中的节点，清空选中
     if (selectedNode.value?.raw?.id === id) {
       selectedNode.value = null
     }
   } catch (e: any) {
+    console.error('删除失败:', e)
     ElMessage.error(e?.message || '删除失败')
   }
 }
