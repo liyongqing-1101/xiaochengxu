@@ -13,7 +13,7 @@
     <!-- 右侧：详情 / 编辑表单 -->
     <div class="right-panel">
       <div v-if="!selectedNode" class="empty-state">
-        <el-icon :size="48" color="#c0c4cc"><InfoFilled /></el-icon>
+        <span class="empty-icon">📂</span>
         <p>请从左侧选择一个分类节点查看详情</p>
       </div>
 
@@ -86,10 +86,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, watch } from 'vue'
+import { ref, reactive, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
-import { InfoFilled } from '@element-plus/icons-vue'
 import CategoryTree from '@/components/category/CategoryTree.vue'
 import { useCategoryStore } from '@/stores/category'
 import {
@@ -369,6 +368,11 @@ function handleReset() {
   height: 100%;
   color: #909399;
   gap: 16px;
+}
+
+.empty-icon {
+  font-size: 48px;
+  opacity: 0.4;
 }
 
 .empty-state p {

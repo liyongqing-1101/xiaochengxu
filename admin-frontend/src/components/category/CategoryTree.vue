@@ -18,10 +18,7 @@
     >
       <template #default="{ node, data }">
         <span class="tree-node">
-          <el-icon v-if="data.type === 'category'" class="node-icon category-icon"><Folder /></el-icon>
-          <el-icon v-else-if="data.type === 'subject'" class="node-icon subject-icon"><Document /></el-icon>
-          <el-icon v-else-if="data.type === 'chapter'" class="node-icon chapter-icon"><Collection /></el-icon>
-          <el-icon v-else class="node-icon tag-icon"><PriceTag /></el-icon>
+          <span class="node-icon">{{ iconForType(data.type) }}</span>
           <span class="node-label">{{ data.label }}</span>
           <span class="node-type-tag">{{ typeLabel(data.type) }}</span>
         </span>
@@ -35,15 +32,15 @@
       :style="{ left: contextMenu.x + 'px', top: contextMenu.y + 'px' }"
     >
       <div class="menu-item" @click="handleMenuAdd">
-        <el-icon><Plus /></el-icon>
+        <span class="menu-icon">＋</span>
         <span>添加子{{ childTypeLabel(contextMenu.data?.type) }}</span>
       </div>
       <div class="menu-item" @click="handleMenuEdit">
-        <el-icon><Edit /></el-icon>
+        <span class="menu-icon">✎</span>
         <span>编辑</span>
       </div>
       <div class="menu-item danger" @click="handleMenuDelete">
-        <el-icon><Delete /></el-icon>
+        <span class="menu-icon">✕</span>
         <span>删除</span>
       </div>
     </div>
@@ -54,10 +51,6 @@
 import { computed, onMounted, ref, reactive, onUnmounted } from 'vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import { useCategoryStore } from '@/stores/category'
-import {
-  Folder, Document, Collection, PriceTag,
-  Plus, Edit, Delete,
-} from '@element-plus/icons-vue'
 
 const emit = defineEmits<{
   (e: 'node-click', node: any): void
@@ -85,6 +78,16 @@ function typeLabel(type: string) {
     tag: '知识点',
   }
   return map[type] || ''
+}
+
+function iconForType(type: string) {
+  const map: Record<string, string> = {
+    category: '📁',
+    subject: '📖',
+    chapter: '📄',
+    tag: '🏷️',
+  }
+  return map[type] || '📌'
 }
 
 function childTypeLabel(type: string) {
@@ -229,11 +232,6 @@ onUnmounted(() => {
   flex-shrink: 0;
 }
 
-.category-icon { color: #409eff; }
-.subject-icon { color: #67c23a; }
-.chapter-icon { color: #e6a23c; }
-.tag-icon { color: #909399; }
-
 .node-label {
   flex: 1;
   overflow: hidden;
@@ -270,6 +268,12 @@ onUnmounted(() => {
   font-size: 14px;
   color: #333;
   transition: background 0.2s;
+}
+
+.menu-icon {
+  width: 18px;
+  text-align: center;
+  font-size: 14px;
 }
 
 .menu-item:hover {
