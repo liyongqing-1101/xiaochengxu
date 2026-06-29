@@ -7,7 +7,7 @@
 
     <el-tree
       ref="treeRef"
-      :data="treeData"
+      :data="localTree"
       :props="{ children: 'children', label: 'label' }"
       node-key="id"
       default-expand-all
@@ -48,8 +48,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, reactive, onUnmounted } from 'vue'
+import { onMounted, ref, reactive, onUnmounted } from 'vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
+import { getCategoryTree } from '@/api/modules/category'
 import { useCategoryStore } from '@/stores/category'
 
 const emit = defineEmits<{
@@ -61,6 +62,7 @@ const emit = defineEmits<{
 
 const categoryStore = useCategoryStore()
 const treeRef = ref()
+const localTree = ref<any[]>([])
 
 // 右键菜单状态
 const contextMenu = reactive({
@@ -69,6 +71,43 @@ const contextMenu = reactive({
   y: 0,
   data: null as any,
 })
+
+// 直接调用 API 获取最新数据，不依赖 store 缓存
+async function loadTreeData() {
+  try {
+    const data = await getCategoryTree()
+    localTree.value = buildTreeData(data || [])
+  } catch (e) {
+    console.error('加载分类树失败', e)
+  }
+}
+
+function buildTreeData(categories: any[]): any[] {
+  return categories.map(cat => ({
+    id: `cat-${cat.id}`,
+    label: cat.name,
+    type: 'category',
+    raw: cat,
+    children: (cat.examSubjects || []).map((subj: any) => ({
+      id: `subj-${subj.id}`,
+      label: subj.name,
+      type: 'subject',
+      raw: subj,
+      children: (subj.examChapters || []).map((chap: any) => ({
+        id: `chap-${chap.id}`,
+        label: chap.name,
+        type: 'chapter',
+        raw: chap,
+        children: (chap.examTags || []).map((tag: any) => ({
+          id: `tag-${tag.id}`,
+          label: tag.name,
+          type: 'tag',
+          raw: tag,
+        })) || [],
+      })) || [],
+    })) || [],
+  }))
+}
 
 function typeLabel(type: string) {
   const map: Record<string, string> = {
@@ -99,34 +138,6 @@ function childTypeLabel(type: string) {
   }
   return map[type] || ''
 }
-
-// 树形数据
-const treeData = computed(() => {
-  return categoryStore.tree.map(cat => ({
-    id: `cat-${cat.id}`,
-    label: cat.name,
-    type: 'category',
-    raw: cat,
-    children: (cat as any).examSubjects?.map((subj: any) => ({
-      id: `subj-${subj.id}`,
-      label: subj.name,
-      type: 'subject',
-      raw: subj,
-      children: (subj as any).examChapters?.map((chap: any) => ({
-        id: `chap-${chap.id}`,
-        label: chap.name,
-        type: 'chapter',
-        raw: chap,
-        children: (chap as any).examTags?.map((tag: any) => ({
-          id: `tag-${tag.id}`,
-          label: tag.name,
-          type: 'tag',
-          raw: tag,
-        })) || [],
-      })) || [],
-    })) || [],
-  }))
-})
 
 // 单击节点：选中并查看详情
 function handleNodeClick(data: any) {

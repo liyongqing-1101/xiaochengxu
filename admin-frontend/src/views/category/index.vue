@@ -3,6 +3,7 @@
     <!-- 左侧：分类树 -->
     <div class="left-panel">
       <CategoryTree
+        ref="treeRef"
         @node-click="handleNodeClick"
         @add="handleAdd"
         @edit="handleEdit"
@@ -100,6 +101,7 @@ import {
 
 const categoryStore = useCategoryStore()
 const formRef = ref<FormInstance>()
+const treeRef = ref()
 
 // 选中的树节点
 const selectedNode = ref<any>(null)
@@ -233,9 +235,12 @@ async function handleSave() {
       await doUpdate()
     }
     ElMessage.success(isNew.value ? '创建成功' : '保存成功')
-    // 重新加载分类树
+    // 刷新树
     categoryStore.tree = []
-    await categoryStore.fetchCategoryTree()
+    await categoryStore.fetchCategoryTree(true)
+    if (treeRef.value) {
+      treeRef.value.loadTreeData()
+    }
     // 重置选中
     if (isNew.value) {
       handleCancelAdd()
@@ -314,7 +319,10 @@ async function handleDelete(node: any) {
     }
     ElMessage.success('删除成功')
     categoryStore.tree = []
-    await categoryStore.fetchCategoryTree()
+    await categoryStore.fetchCategoryTree(true)
+    if (treeRef.value) {
+      treeRef.value.loadTreeData()
+    }
     // 如果删除的是当前选中的节点，清空选中
     if (selectedNode.value?.raw?.id === id) {
       selectedNode.value = null
