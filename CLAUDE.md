@@ -8,16 +8,17 @@ This is a **高校教资刷题** (college teacher certification exam practice) s
 
 | Sub-project | Directory | Tech Stack |
 |-------------|-----------|------------|
-| Mini-program frontend | `./` (root) | UniApp Vue3 + TypeScript + Pinia + Vant Weapp |
+| Mini-program frontend | `./user-frontend/` | UniApp Vue3 + TypeScript + Pinia + Vant Weapp |
 | Backend | `./backend/` | SpringBoot 3.2 + MyBatis-Plus 3.5 + MySQL + Redis + Redisson |
 | Admin frontend | `./admin-frontend/` | Vue3 + Element Plus + TypeScript + Vite |
 
 ## Common Commands
 
-### Mini-program (root)
+### Mini-program (user-frontend)
 ```bash
+cd user-frontend
 pnpm dev:mp-weixin          # Dev mode (output to dist/dev/mp-weixin)
-pnpm build:mp-weixin        # Production build
+pnpm build:mp-weixin        # Production build → dist/build/mp-weixin
 pnpm type-check             # TypeScript type checking
 ```
 
