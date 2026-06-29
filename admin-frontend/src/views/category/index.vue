@@ -227,7 +227,10 @@ function handleEdit(node: any) {
 // 保存
 async function handleSave() {
   const valid = await formRef.value?.validate().catch(() => false)
-  if (!valid) return
+  if (!valid) {
+    ElMessage.warning('请检查表单填写')
+    return
+  }
 
   saving.value = true
   try {
