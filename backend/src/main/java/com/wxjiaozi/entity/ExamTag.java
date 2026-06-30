@@ -1,18 +1,25 @@
 package com.wxjiaozi.entity;
 
-import com.baomidou.mybatisplus.annotation.TableName;
-import com.wxjiaozi.common.BaseEntity;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
-import lombok.EqualsAndHashCode;
-import lombok.experimental.Accessors;
+import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
+
+/**
+ * 知识点标签（MyBatis 原生版）
+ */
 @Data
-@EqualsAndHashCode(callSuper = true)
-@Accessors(chain = true)
-@TableName("exam_tag")
-public class ExamTag extends BaseEntity {
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class ExamTag {
 
+    private Long id;
     private Long chapterId;
     private String name;
     private Integer questionCount;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 }

@@ -1,14 +1,26 @@
 package com.wxjiaozi.mapper;
 
-import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.wxjiaozi.entity.AdminUser;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
-import org.apache.ibatis.annotations.Select;
 
+import java.util.List;
+
+/**
+ * 管理员 Mapper（MyBatis 原生版）
+ */
 @Mapper
-public interface AdminUserMapper extends BaseMapper<AdminUser> {
+public interface AdminUserMapper {
 
-    @Select("SELECT * FROM admin_user WHERE username = #{username}")
+    AdminUser selectById(@Param("id") Long id);
+
     AdminUser selectByUsername(@Param("username") String username);
+
+    List<AdminUser> selectAll();
+
+    int insert(AdminUser admin);
+
+    int updateById(AdminUser admin);
+
+    int deleteById(@Param("id") Long id);
 }

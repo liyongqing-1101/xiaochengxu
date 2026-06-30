@@ -3,22 +3,45 @@
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.wxjiaozi.mapper.ExamQuestionMapper">
 
+    <!-- ============================================================ -->
+    <!-- ResultMap：包含 JSON 字段 optionList 的类型处理器 -->
+    <!-- ============================================================ -->
     <resultMap id="ExamQuestionResultMap" type="com.wxjiaozi.entity.ExamQuestion">
         <id column="id" property="id"/>
         <result column="subject_id" property="subjectId"/>
         <result column="type" property="type"/>
         <result column="stem" property="stem"/>
-        <result column="option_list" property="optionList" typeHandler="com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler"/>
+        <!-- JSON 字段：使用自定义类型处理器 -->
+        <result column="option_list" property="optionList"
+                typeHandler="com.wxjiaozi.handler.QuestionOptionListTypeHandler"/>
         <result column="answer" property="answer"/>
         <result column="explanation" property="explanation"/>
         <result column="status" property="status"/>
-        <result column="created_at" property="createTime"/>
-        <result column="updated_at" property="updateTime"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
     </resultMap>
 
+    <!-- ============================================================ -->
+    <!-- 基础列：用于 SELECT 子句复用 -->
+    <!-- ============================================================ -->
+    <sql id="Base_Column_List">
+        id, subject_id, type, stem, option_list, answer, explanation, status, created_at, updated_at
+    </sql>
+
+    <!-- ============================================================ -->
+    <!-- 1. 根据ID查询题目 -->
+    <!-- ============================================================ -->
+    <select id="selectById" resultMap="ExamQuestionResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM exam_question
+        WHERE id = #{id}
+    </select>
+
+    <!-- ============================================================ -->
+    <!-- 2. 分页查询题目列表（支持多条件筛选） -->
+    <!-- ============================================================ -->
     <select id="selectPageWithFilters" resultMap="ExamQuestionResultMap">
-        SELECT
-            id, subject_id, type, stem, option_list, answer, explanation, status, created_at, updated_at
+        SELECT <include refid="Base_Column_List"/>
         FROM exam_question
         <where>
             <if test="subjectId != null">
@@ -35,9 +58,34 @@
             </if>
         </where>
         ORDER BY id DESC
+        LIMIT #{offset}, #{limit}
     </select>
 
-    <!-- 按科目和题型统计题量（过滤禁用状态） -->
+    <!-- ============================================================ -->
+    <!-- 3. 统计符合条件的题目总数 -->
+    <!-- ============================================================ -->
+    <select id="countWithFilters" resultType="java.lang.Long">
+        SELECT COUNT(*)
+        FROM exam_question
+        <where>
+            <if test="subjectId != null">
+                AND subject_id = #{subjectId}
+            </if>
+            <if test="type != null">
+                AND type = #{type}
+            </if>
+            <if test="status != null">
+                AND status = #{status}
+            </if>
+            <if test="keyword != null and keyword != ''">
+                AND stem LIKE CONCAT('%', #{keyword}, '%')
+            </if>
+        </where>
+    </select>
+
+    <!-- ============================================================ -->
+    <!-- 4. 按科目和题型统计题量（过滤禁用状态 status=0） -->
+    <!-- ============================================================ -->
     <select id="countBySubjectAndType" resultType="java.util.HashMap">
         SELECT
             type,
@@ -48,16 +96,167 @@
         GROUP BY type
     </select>
 
-    <!-- 随机抽题：按科目+题型随机抽取指定数量的题目（过滤禁用状态） -->
+    <!-- ============================================================ -->
+    <!-- 5. 随机抽题：按科目+题型随机抽取指定数量的题目 -->
+    <!-- 使用 ORDER BY RAND() 实现真正随机抽题 -->
+    <!-- ============================================================ -->
     <select id="selectRandomBySubjectAndType" resultMap="ExamQuestionResultMap">
-        SELECT
-            id, subject_id, type, stem, option_list, answer, explanation, status, created_at, updated_at
+        SELECT <include refid="Base_Column_List"/>
         FROM exam_question
         WHERE subject_id = #{subjectId}
-          AND type = #{type}
           AND status = 1
+          <if test="type != null">
+              AND type = #{type}
+          </if>
         ORDER BY RAND()
         LIMIT #{limit}
+    </select>
+
+    <!-- ============================================================ -->
+    <!-- 6. 插入新题目 -->
+    <!-- JSON 字段 option_list 使用类型处理器自动转换 -->
+    <!-- ============================================================ -->
+    <insert id="insert" parameterType="com.wxjiaozi.entity.ExamQuestion" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO exam_question (
+            subject_id,
+            type,
+            stem,
+            option_list,
+            answer,
+            explanation,
+            status,
+            created_at,
+            updated_at
+        ) VALUES (
+            #{subjectId},
+            #{type},
+            #{stem},
+            #{optionList, typeHandler=com.wxjiaozi.handler.QuestionOptionListTypeHandler},
+            #{answer},
+            #{explanation},
+            #{status, jdbcType=INTEGER},
+            NOW(),
+            NOW()
+        )
+    </insert>
+
+    <!-- ============================================================ -->
+    <!-- 7. 批量插入题目（Excel导入使用） -->
+    <!-- ============================================================ -->
+    <insert id="batchInsert" parameterType="java.util.List">
+        INSERT INTO exam_question (
+            subject_id,
+            type,
+            stem,
+            option_list,
+            answer,
+            explanation,
+            status,
+            created_at,
+            updated_at
+        ) VALUES
+        <foreach collection="list" item="item" separator=",">
+            (
+                #{item.subjectId},
+                #{item.type},
+                #{item.stem},
+                #{item.optionList, typeHandler=com.wxjiaozi.handler.QuestionOptionListTypeHandler},
+                #{item.answer},
+                #{item.explanation},
+                #{item.status, jdbcType=INTEGER},
+                NOW(),
+                NOW()
+            )
+        </foreach>
+    </insert>
+
+    <!-- ============================================================ -->
+    <!-- 8. 更新题目 -->
+    <!-- ============================================================ -->
+    <update id="updateById" parameterType="com.wxjiaozi.entity.ExamQuestion">
+        UPDATE exam_question
+        <set>
+            <if test="subjectId != null">subject_id = #{subjectId},</if>
+            <if test="type != null">type = #{type},</if>
+            <if test="stem != null">stem = #{stem},</if>
+            <if test="optionList != null">
+                option_list = #{optionList, typeHandler=com.wxjiaozi.handler.QuestionOptionListTypeHandler},
+            </if>
+            <if test="answer != null">answer = #{answer},</if>
+            <if test="explanation != null">explanation = #{explanation},</if>
+            <if test="status != null">status = #{status},</if>
+            updated_at = NOW()
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <!-- ============================================================ -->
+    <!-- 9. 根据ID删除题目 -->
+    <!-- ============================================================ -->
+    <delete id="deleteById">
+        DELETE FROM exam_question WHERE id = #{id}
+    </delete>
+
+    <!-- ============================================================ -->
+    <!-- 10. 批量删除题目 -->
+    <!-- ============================================================ -->
+    <delete id="batchDeleteByIds">
+        DELETE FROM exam_question
+        WHERE id IN
+        <foreach collection="ids" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+
+    <!-- ============================================================ -->
+    <!-- 11. 查询所有正常状态的题目 -->
+    <!-- ============================================================ -->
+    <select id="selectAllActive" resultMap="ExamQuestionResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM exam_question
+        WHERE status = 1
+        ORDER BY id DESC
+    </select>
+
+    <!-- ============================================================ -->
+    <!-- 12. 根据偏移量查询单条题目（用于每日一题） -->
+    <!-- ============================================================ -->
+    <select id="selectByOffset" resultMap="ExamQuestionResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM exam_question
+        WHERE status = 1
+        ORDER BY id
+        LIMIT #{offset}, 1
+    </select>
+
+    <!-- ============================================================ -->
+    <!-- 13. 查询所有题目（仅返回题干用于去重） -->
+    <!-- ============================================================ -->
+    <select id="selectAllForDeduplication" resultMap="ExamQuestionResultMap">
+        SELECT stem
+        FROM exam_question
+    </select>
+
+    <!-- ============================================================ -->
+    <!-- 14. 统计指定科目和状态的题目数量 -->
+    <!-- ============================================================ -->
+    <select id="countBySubjectAndStatus" resultType="java.lang.Long">
+        SELECT COUNT(*)
+        FROM exam_question
+        WHERE subject_id = #{subjectId}
+          AND status = #{status}
+    </select>
+
+    <!-- ============================================================ -->
+    <!-- 15. 根据ID列表批量查询题目 -->
+    <!-- ============================================================ -->
+    <select id="selectByIds" resultMap="ExamQuestionResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM exam_question
+        WHERE id IN
+        <foreach collection="ids" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
     </select>
 
 </mapper>

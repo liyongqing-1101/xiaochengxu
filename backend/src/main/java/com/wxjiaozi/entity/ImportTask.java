@@ -1,33 +1,34 @@
 package com.wxjiaozi.entity;
 
-import com.baomidou.mybatisplus.annotation.TableField;
-import com.baomidou.mybatisplus.annotation.TableName;
-import com.wxjiaozi.common.BaseEntity;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
-import lombok.EqualsAndHashCode;
-import lombok.experimental.Accessors;
+import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
+/**
+ * 导入任务（MyBatis 原生版）
+ */
 @Data
-@EqualsAndHashCode(callSuper = true)
-@Accessors(chain = true)
-@TableName("import_task")
-public class ImportTask extends BaseEntity {
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class ImportTask {
 
+    private Long id;
     private Long adminId;
-    private Long categoryId;
-    private Long fileSize;
     private String fileName;
-    private String status;
-
-    @TableField("error_file_url")
-    private String errorFileUrl;
-
-    private String errorDetail;
+    private Long fileSize;
+    private Long categoryId;
     private Integer totalRows;
     private Integer successCount;
     private Integer failCount;
+    private String status;
+    private String errorFileUrl;
+    private String errorDetail;
     private LocalDateTime startedAt;
     private LocalDateTime completedAt;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 }

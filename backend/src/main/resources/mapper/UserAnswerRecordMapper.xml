@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.wxjiaozi.mapper.UserAnswerRecordMapper">
+
+    <resultMap id="BaseResultMap" type="com.wxjiaozi.entity.UserAnswerRecord">
+        <id column="id" property="id"/>
+        <result column="user_id" property="userId"/>
+        <result column="question_id" property="questionId"/>
+        <result column="subject_id" property="subjectId"/>
+        <result column="session_id" property="sessionId"/>
+        <result column="selected_options" property="selectedOptions"/>
+        <result column="is_correct" property="isCorrect"/>
+        <result column="duration" property="duration"/>
+        <result column="created_at" property="createdAt"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, user_id, question_id, subject_id, session_id, selected_options, is_correct, duration, created_at
+    </sql>
+
+    <select id="selectById" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM user_answer_record
+        WHERE id = #{id}
+    </select>
+
+    <insert id="insert" parameterType="com.wxjiaozi.entity.UserAnswerRecord" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO user_answer_record (
+            user_id, question_id, subject_id, session_id, selected_options, is_correct, duration, created_at
+        ) VALUES (
+            #{userId}, #{questionId}, #{subjectId}, #{sessionId}, #{selectedOptions}, #{isCorrect}, #{duration}, NOW()
+        )
+    </insert>
+
+    <select id="selectBySessionIdAndUserId" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM user_answer_record
+        WHERE session_id = #{sessionId} AND user_id = #{userId}
+        ORDER BY created_at
+    </select>
+
+    <select id="selectByUserId" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM user_answer_record
+        WHERE user_id = #{userId}
+        ORDER BY created_at DESC
+    </select>
+
+    <select id="selectByUserIdWithPagination" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM user_answer_record
+        WHERE user_id = #{userId}
+        GROUP BY session_id
+        ORDER BY MAX(created_at) DESC
+        LIMIT #{offset}, #{pageSize}
+    </select>
+
+    <select id="countByUserId" resultType="java.lang.Long">
+        SELECT COUNT(DISTINCT session_id)
+        FROM user_answer_record
+        WHERE user_id = #{userId}
+    </select>
+
+    <update id="updateById" parameterType="com.wxjiaozi.entity.UserAnswerRecord">
+        UPDATE user_answer_record
+        <set>
+            <if test="userId != null">user_id = #{userId},</if>
+            <if test="questionId != null">question_id = #{questionId},</if>
+            <if test="subjectId != null">subject_id = #{subjectId},</if>
+            <if test="sessionId != null">session_id = #{sessionId},</if>
+            <if test="selectedOptions != null">selected_options = #{selectedOptions},</if>
+            <if test="isCorrect != null">is_correct = #{isCorrect},</if>
+            <if test="duration != null">duration = #{duration},</if>
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM user_answer_record WHERE id = #{id}
+    </delete>
+
+</mapper>

@@ -1,8 +1,5 @@
 package com.wxjiaozi.service.impl;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.wxjiaozi.common.BusinessException;
 import com.wxjiaozi.common.PageResult;
 import com.wxjiaozi.dto.mini.QuestionDTO;
@@ -65,14 +62,12 @@ public class WrongBookServiceImpl implements WrongBookService {
 
     @Override
     public PageResult<WrongQuestionDTO> getWrongList(Long userId, Long subjectId, int page, int pageSize) {
-        Page<UserWrongQuestion> mpPage = new Page<>(page, pageSize);
-        LambdaQueryWrapper<UserWrongQuestion> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(UserWrongQuestion::getUserId, userId);
-        wrapper.orderByDesc(UserWrongQuestion::getUpdateTime);
-        IPage<UserWrongQuestion> result = userWrongQuestionMapper.selectPage(mpPage, wrapper);
+        int offset = (page - 1) * pageSize;
+        List<UserWrongQuestion> wrongQuestions = userWrongQuestionMapper.selectByUserIdWithPagination(userId, offset, pageSize);
+        Long total = userWrongQuestionMapper.countByUserId(userId);
 
         List<WrongQuestionDTO> list = new ArrayList<>();
-        for (UserWrongQuestion wrong : result.getRecords()) {
+        for (UserWrongQuestion wrong : wrongQuestions) {
             ExamQuestion question = examQuestionMapper.selectById(wrong.getQuestionId());
             if (question == null) {
                 continue;
@@ -90,14 +85,13 @@ public class WrongBookServiceImpl implements WrongBookService {
             dto.setQuestionId(wrong.getQuestionId());
             dto.setQuestion(questionDTO);
             dto.setErrorCount(wrong.getErrorCount());
-            dto.setLastErrorTime(wrong.getUpdateTime());
+            dto.setLastErrorTime(wrong.getUpdatedAt());
             dto.setLastWrongAnswer(wrong.getLastWrongAnswer());
             dto.setSource(wrong.getSource());
             list.add(dto);
         }
 
-        return new PageResult<>(list, result.getTotal(), page, pageSize,
-                (long) page * pageSize < result.getTotal());
+        return new PageResult<>(list, total, page, pageSize);
     }
 
     @Override

@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.wxjiaozi.mapper.ExamCategoryMapper">
+
+    <resultMap id="BaseResultMap" type="com.wxjiaozi.entity.ExamCategory">
+        <id column="id" property="id"/>
+        <result column="name" property="name"/>
+        <result column="icon" property="icon"/>
+        <result column="description" property="description"/>
+        <result column="sort_order" property="sortOrder"/>
+        <result column="status" property="status"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, name, icon, description, sort_order, status, created_at, updated_at
+    </sql>
+
+    <select id="selectById" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM exam_category
+        WHERE id = #{id}
+    </select>
+
+    <select id="selectAll" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM exam_category
+        WHERE status = 1
+        ORDER BY sort_order ASC
+    </select>
+
+    <insert id="insert" parameterType="com.wxjiaozi.entity.ExamCategory" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO exam_category (name, icon, description, sort_order, status, created_at, updated_at)
+        VALUES (#{name}, #{icon}, #{description}, #{sortOrder}, #{status}, NOW(), NOW())
+    </insert>
+
+    <update id="updateById" parameterType="com.wxjiaozi.entity.ExamCategory">
+        UPDATE exam_category
+        <set>
+            <if test="name != null">name = #{name},</if>
+            <if test="icon != null">icon = #{icon},</if>
+            <if test="description != null">description = #{description},</if>
+            <if test="sortOrder != null">sort_order = #{sortOrder},</if>
+            <if test="status != null">status = #{status},</if>
+            updated_at = NOW()
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM exam_category WHERE id = #{id}
+    </delete>
+
+</mapper>

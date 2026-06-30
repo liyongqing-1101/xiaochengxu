@@ -2,9 +2,6 @@ package com.wxjiaozi.service.impl;
 
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.crypto.digest.BCrypt;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.wxjiaozi.common.BusinessException;
@@ -233,13 +230,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public UserStatsDTO getStats(Long userId, Long categoryId) {
-        LambdaQueryWrapper<UserAnswerRecord> answerWrapper = new LambdaQueryWrapper<>();
-        answerWrapper.eq(UserAnswerRecord::getUserId, userId);
-        if (categoryId != null) {
-            // 移除 categoryId 过滤，只按 userId 过滤
-        }
-
-        List<UserAnswerRecord> records = userAnswerRecordMapper.selectList(answerWrapper);
+        List<UserAnswerRecord> records = userAnswerRecordMapper.selectByUserId(userId);
         long totalQuestions = records.size();
         long correctCount = records.stream().filter(r -> r.getIsCorrect() != null && r.getIsCorrect() == 1).count();
         double accuracy = totalQuestions > 0 ? (double) correctCount / totalQuestions : 0.0;
@@ -254,7 +245,7 @@ public class UserServiceImpl implements UserService {
         if (latestCheckIn != null) {
             LocalDate checkDate = latestCheckIn.getCheckDate();
             while (checkDate != null) {
-                UserCheckIn prevCheckIn = userCheckInMapper.selectByUserIdAndDate(userId, checkDate.toString());
+                UserCheckIn prevCheckIn = userCheckInMapper.selectByUserIdAndDate(userId, checkDate);
                 if (prevCheckIn != null) {
                     streakDays++;
                     checkDate = checkDate.minusDays(1);
@@ -280,7 +271,7 @@ public class UserServiceImpl implements UserService {
         LocalDate today = LocalDate.now();
         String todayStr = today.toString();
 
-        UserCheckIn existingCheckIn = userCheckInMapper.selectByUserIdAndDate(userId, todayStr);
+        UserCheckIn existingCheckIn = userCheckInMapper.selectByUserIdAndDate(userId, today);
         boolean todayCheckedIn = existingCheckIn != null;
 
         if (!todayCheckedIn) {
@@ -293,7 +284,7 @@ public class UserServiceImpl implements UserService {
         int consecutiveDays = 0;
         LocalDate checkDate = today;
         while (true) {
-            UserCheckIn checkIn = userCheckInMapper.selectByUserIdAndDate(userId, checkDate.toString());
+            UserCheckIn checkIn = userCheckInMapper.selectByUserIdAndDate(userId, checkDate);
             if (checkIn != null) {
                 consecutiveDays++;
                 checkDate = checkDate.minusDays(1);
@@ -311,21 +302,14 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public PageResult<PracticeHistoryDTO> getHistory(Long userId, int page, int pageSize) {
-        LambdaQueryWrapper<UserAnswerRecord> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(UserAnswerRecord::getUserId, userId);
-        wrapper.orderByDesc(UserAnswerRecord::getCreateTime);
-        wrapper.groupBy(UserAnswerRecord::getSessionId);
-
-        Page<UserAnswerRecord> mpPage = new Page<>(page, pageSize);
-        IPage<UserAnswerRecord> result = userAnswerRecordMapper.selectPage(mpPage, wrapper);
+        int offset = (page - 1) * pageSize;
+        List<UserAnswerRecord> records = userAnswerRecordMapper.selectByUserIdWithPagination(userId, offset, pageSize);
+        Long total = userAnswerRecordMapper.countByUserId(userId);
 
         List<PracticeHistoryDTO> list = new ArrayList<>();
-        for (UserAnswerRecord record : result.getRecords()) {
+        for (UserAnswerRecord record : records) {
             String sessionId = record.getSessionId();
-            LambdaQueryWrapper<UserAnswerRecord> sessionWrapper = new LambdaQueryWrapper<>();
-            sessionWrapper.eq(UserAnswerRecord::getSessionId, sessionId);
-            sessionWrapper.eq(UserAnswerRecord::getUserId, userId);
-            List<UserAnswerRecord> sessionRecords = userAnswerRecordMapper.selectList(sessionWrapper);
+            List<UserAnswerRecord> sessionRecords = userAnswerRecordMapper.selectBySessionIdAndUserId(sessionId, userId);
 
             int totalQuestions = sessionRecords.size();
             int correctCount = (int) sessionRecords.stream()
@@ -342,12 +326,11 @@ public class UserServiceImpl implements UserService {
             dto.setCorrectCount(correctCount);
             dto.setAccuracy(Math.round(accuracy * 10000.0) / 10000.0);
             dto.setDuration(totalDuration);
-            dto.setCreatedAt(record.getCreateTime());
+            dto.setCreatedAt(record.getCreatedAt());
             list.add(dto);
         }
 
-        return new PageResult<>(list, result.getTotal(), page, pageSize,
-                (long) page * pageSize < result.getTotal());
+        return new PageResult<>(list, total, page, pageSize);
     }
 
     @Override

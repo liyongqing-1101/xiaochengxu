@@ -2,8 +2,6 @@ package com.wxjiaozi.service.impl;
 
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.crypto.digest.BCrypt;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.wxjiaozi.common.BusinessException;
@@ -91,12 +89,12 @@ public class AdminServiceImpl implements AdminService {
     public PageResult<ExamQuestion> queryQuestions(Long categoryId, Long subjectId, Long chapterId, Long tagId,
                                                     Integer type, Integer difficulty, Integer status, String keyword,
                                                     int page, int pageSize) {
-        Page<ExamQuestion> mpPage = new Page<>(page, pageSize);
-        // 简化：只保留 subjectId, type, status, keyword
-        Page<ExamQuestion> result = examQuestionMapper.selectPageWithFilters(
-                mpPage, subjectId, type, status, keyword
+        int offset = (page - 1) * pageSize;
+        List<ExamQuestion> records = examQuestionMapper.selectPageWithFilters(
+                offset, pageSize, subjectId, type, status, keyword
         );
-        return PageResult.of(result);
+        Long total = examQuestionMapper.countWithFilters(subjectId, type, status, keyword);
+        return new PageResult<>(records, total, page, pageSize);
     }
 
     @Override
@@ -172,7 +170,7 @@ public class AdminServiceImpl implements AdminService {
         if (ids == null || ids.isEmpty()) {
             return;
         }
-        examQuestionMapper.deleteBatchIds(ids);
+        examQuestionMapper.batchDeleteByIds(ids);
     }
 
     @Override
@@ -181,7 +179,7 @@ public class AdminServiceImpl implements AdminService {
         if (ids == null || ids.isEmpty()) {
             return;
         }
-        List<ExamQuestion> questions = examQuestionMapper.selectBatchIds(ids);
+        List<ExamQuestion> questions = examQuestionMapper.selectByIds(ids);
         for (ExamQuestion q : questions) {
             q.setStatus(status);
         }
@@ -306,7 +304,7 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     public List<ExamCategory> getFullCategoryTree() {
-        List<ExamCategory> categories = examCategoryMapper.selectList(null);
+        List<ExamCategory> categories = examCategoryMapper.selectAll();
         for (ExamCategory category : categories) {
             List<ExamSubject> subjects = examSubjectMapper.selectByCategoryId(category.getId());
             for (ExamSubject subject : subjects) {

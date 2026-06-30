@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.wxjiaozi.mapper.UserFeedbackMapper">
+
+    <resultMap id="BaseResultMap" type="com.wxjiaozi.entity.UserFeedback">
+        <id column="id" property="id"/>
+        <result column="user_id" property="userId"/>
+        <result column="content" property="content"/>
+        <result column="contact" property="contact"/>
+        <result column="status" property="status"/>
+        <result column="created_at" property="createdAt"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, user_id, content, contact, status, created_at
+    </sql>
+
+    <select id="selectById" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM user_feedback
+        WHERE id = #{id}
+    </select>
+
+    <select id="selectByUserId" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM user_feedback
+        WHERE user_id = #{userId}
+        ORDER BY created_at DESC
+    </select>
+
+    <select id="selectAll" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM user_feedback
+        ORDER BY created_at DESC
+    </select>
+
+    <insert id="insert" parameterType="com.wxjiaozi.entity.UserFeedback" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO user_feedback (user_id, content, contact, status, created_at)
+        VALUES (#{userId}, #{content}, #{contact}, #{status}, NOW())
+    </insert>
+
+    <update id="updateById" parameterType="com.wxjiaozi.entity.UserFeedback">
+        UPDATE user_feedback
+        <set>
+            <if test="userId != null">user_id = #{userId},</if>
+            <if test="content != null">content = #{content},</if>
+            <if test="contact != null">contact = #{contact},</if>
+            <if test="status != null">status = #{status},</if>
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM user_feedback WHERE id = #{id}
+    </delete>
+
+</mapper>

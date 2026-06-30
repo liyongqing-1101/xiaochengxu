@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.wxjiaozi.mapper.ImportTaskMapper">
+
+    <resultMap id="BaseResultMap" type="com.wxjiaozi.entity.ImportTask">
+        <id column="id" property="id"/>
+        <result column="admin_id" property="adminId"/>
+        <result column="file_name" property="fileName"/>
+        <result column="file_size" property="fileSize"/>
+        <result column="category_id" property="categoryId"/>
+        <result column="total_rows" property="totalRows"/>
+        <result column="success_count" property="successCount"/>
+        <result column="fail_count" property="failCount"/>
+        <result column="status" property="status"/>
+        <result column="error_file_url" property="errorFileUrl"/>
+        <result column="error_detail" property="errorDetail"/>
+        <result column="started_at" property="startedAt"/>
+        <result column="completed_at" property="completedAt"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, admin_id, file_name, file_size, category_id, total_rows, success_count, fail_count,
+        status, error_file_url, error_detail, started_at, completed_at, created_at, updated_at
+    </sql>
+
+    <select id="selectById" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM import_task
+        WHERE id = #{id}
+    </select>
+
+    <select id="selectAll" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM import_task
+        ORDER BY created_at DESC
+    </select>
+
+    <insert id="insert" parameterType="com.wxjiaozi.entity.ImportTask" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO import_task (
+            admin_id, file_name, file_size, category_id, total_rows, success_count, fail_count,
+            status, error_file_url, error_detail, started_at, completed_at, created_at, updated_at
+        ) VALUES (
+            #{adminId}, #{fileName}, #{fileSize}, #{categoryId}, #{totalRows}, #{successCount}, #{failCount},
+            #{status}, #{errorFileUrl}, #{errorDetail}, #{startedAt}, #{completedAt}, NOW(), NOW()
+        )
+    </insert>
+
+    <update id="updateById" parameterType="com.wxjiaozi.entity.ImportTask">
+        UPDATE import_task
+        <set>
+            <if test="adminId != null">admin_id = #{adminId},</if>
+            <if test="fileName != null">file_name = #{fileName},</if>
+            <if test="fileSize != null">file_size = #{fileSize},</if>
+            <if test="categoryId != null">category_id = #{categoryId},</if>
+            <if test="totalRows != null">total_rows = #{totalRows},</if>
+            <if test="successCount != null">success_count = #{successCount},</if>
+            <if test="failCount != null">fail_count = #{failCount},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="errorFileUrl != null">error_file_url = #{errorFileUrl},</if>
+            <if test="errorDetail != null">error_detail = #{errorDetail},</if>
+            <if test="startedAt != null">started_at = #{startedAt},</if>
+            <if test="completedAt != null">completed_at = #{completedAt},</if>
+            updated_at = NOW()
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM import_task WHERE id = #{id}
+    </delete>
+
+    <select id="selectWithPagination" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM import_task
+        ORDER BY created_at DESC
+        LIMIT #{offset}, #{limit}
+    </select>
+
+    <select id="countAll" resultType="java.lang.Long">
+        SELECT COUNT(*) FROM import_task
+    </select>
+
+</mapper>

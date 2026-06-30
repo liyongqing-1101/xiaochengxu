@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.wxjiaozi.mapper.ExamTagMapper">
+
+    <resultMap id="BaseResultMap" type="com.wxjiaozi.entity.ExamTag">
+        <id column="id" property="id"/>
+        <result column="chapter_id" property="chapterId"/>
+        <result column="name" property="name"/>
+        <result column="question_count" property="questionCount"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, chapter_id, name, question_count, created_at, updated_at
+    </sql>
+
+    <select id="selectById" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM exam_tag
+        WHERE id = #{id}
+    </select>
+
+    <select id="selectByChapterId" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM exam_tag
+        WHERE chapter_id = #{chapterId}
+        ORDER BY id ASC
+    </select>
+
+    <insert id="insert" parameterType="com.wxjiaozi.entity.ExamTag" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO exam_tag (chapter_id, name, question_count, created_at, updated_at)
+        VALUES (#{chapterId}, #{name}, #{questionCount}, NOW(), NOW())
+    </insert>
+
+    <update id="updateById" parameterType="com.wxjiaozi.entity.ExamTag">
+        UPDATE exam_tag
+        <set>
+            <if test="chapterId != null">chapter_id = #{chapterId},</if>
+            <if test="name != null">name = #{name},</if>
+            <if test="questionCount != null">question_count = #{questionCount},</if>
+            updated_at = NOW()
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM exam_tag WHERE id = #{id}
+    </delete>
+
+</mapper>

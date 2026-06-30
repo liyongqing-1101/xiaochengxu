@@ -1,26 +1,33 @@
 package com.wxjiaozi.entity;
 
-import com.baomidou.mybatisplus.annotation.TableField;
-import com.baomidou.mybatisplus.annotation.TableName;
-import com.wxjiaozi.common.BaseEntity;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
-import lombok.EqualsAndHashCode;
-import lombok.experimental.Accessors;
+import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
+/**
+ * 考试分类（MyBatis 原生版）
+ */
 @Data
-@EqualsAndHashCode(callSuper = true)
-@Accessors(chain = true)
-@TableName("exam_category")
-public class ExamCategory extends BaseEntity {
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class ExamCategory {
 
+    private Long id;
     private String name;
     private String icon;
     private String description;
     private Integer sortOrder;
     private Integer status;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 
-    @TableField(exist = false)
+    /**
+     * 非数据库字段：科目列表
+     */
     private List<ExamSubject> subjects;
 }

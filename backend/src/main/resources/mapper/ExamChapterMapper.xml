@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.wxjiaozi.mapper.ExamChapterMapper">
+
+    <resultMap id="BaseResultMap" type="com.wxjiaozi.entity.ExamChapter">
+        <id column="id" property="id"/>
+        <result column="subject_id" property="subjectId"/>
+        <result column="name" property="name"/>
+        <result column="question_count" property="questionCount"/>
+        <result column="sort_order" property="sortOrder"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, subject_id, name, question_count, sort_order, created_at, updated_at
+    </sql>
+
+    <select id="selectById" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM exam_chapter
+        WHERE id = #{id}
+    </select>
+
+    <select id="selectBySubjectId" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM exam_chapter
+        WHERE subject_id = #{subjectId}
+        ORDER BY sort_order ASC
+    </select>
+
+    <insert id="insert" parameterType="com.wxjiaozi.entity.ExamChapter" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO exam_chapter (subject_id, name, question_count, sort_order, created_at, updated_at)
+        VALUES (#{subjectId}, #{name}, #{questionCount}, #{sortOrder}, NOW(), NOW())
+    </insert>
+
+    <update id="updateById" parameterType="com.wxjiaozi.entity.ExamChapter">
+        UPDATE exam_chapter
+        <set>
+            <if test="subjectId != null">subject_id = #{subjectId},</if>
+            <if test="name != null">name = #{name},</if>
+            <if test="questionCount != null">question_count = #{questionCount},</if>
+            <if test="sortOrder != null">sort_order = #{sortOrder},</if>
+            updated_at = NOW()
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM exam_chapter WHERE id = #{id}
+    </delete>
+
+</mapper>

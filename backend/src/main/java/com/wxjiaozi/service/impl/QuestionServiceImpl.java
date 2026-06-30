@@ -1,18 +1,13 @@
 package com.wxjiaozi.service.impl;
 
-import cn.hutool.core.util.StrUtil;
-import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.wxjiaozi.common.BusinessException;
 import com.wxjiaozi.common.PageResult;
 import com.wxjiaozi.dto.mini.DailyQuestionDTO;
 import com.wxjiaozi.dto.mini.QuestionDTO;
 import com.wxjiaozi.dto.mini.SubjectStatsDTO;
 import com.wxjiaozi.entity.ExamQuestion;
-import com.wxjiaozi.entity.UserAnswerRecord;
 import com.wxjiaozi.entity.UserCollection;
 import com.wxjiaozi.mapper.ExamQuestionMapper;
-import com.wxjiaozi.mapper.UserAnswerRecordMapper;
 import com.wxjiaozi.mapper.UserCollectionMapper;
 import com.wxjiaozi.service.QuestionService;
 import lombok.extern.slf4j.Slf4j;
@@ -25,59 +20,55 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
+/**
+ * 题目服务（MyBatis 原生版）
+ */
 @Slf4j
 @Service
 public class QuestionServiceImpl implements QuestionService {
 
     private final ExamQuestionMapper examQuestionMapper;
     private final UserCollectionMapper userCollectionMapper;
-    private final UserAnswerRecordMapper userAnswerRecordMapper;
 
     public QuestionServiceImpl(ExamQuestionMapper examQuestionMapper,
-                               UserCollectionMapper userCollectionMapper,
-                               UserAnswerRecordMapper userAnswerRecordMapper) {
+                               UserCollectionMapper userCollectionMapper) {
         this.examQuestionMapper = examQuestionMapper;
         this.userCollectionMapper = userCollectionMapper;
-        this.userAnswerRecordMapper = userAnswerRecordMapper;
     }
 
     @Override
     public PageResult<QuestionDTO> getQuestionList(Long subjectId, Integer type,
                                                    Integer status, String keyword, int page, int pageSize) {
-        Page<ExamQuestion> mpPage = new Page<>(page, pageSize);
-        IPage<ExamQuestion> result = examQuestionMapper.selectPageWithFilters(
-                mpPage, subjectId, type, status, keyword);
+        // 原生分页计算：offset = (page - 1) * pageSize
+        int offset = (page - 1) * pageSize;
+        List<ExamQuestion> questions = examQuestionMapper.selectPageWithFilters(
+                offset, pageSize, subjectId, type, status, keyword);
+        Long total = examQuestionMapper.countWithFilters(subjectId, type, status, keyword);
 
         List<QuestionDTO> dtoList = new ArrayList<>();
-        for (ExamQuestion q : result.getRecords()) {
+        for (ExamQuestion q : questions) {
             dtoList.add(convertToDTO(q));
         }
 
-        Page<QuestionDTO> dtoPage = new Page<>(page, pageSize, result.getTotal());
-        dtoPage.setRecords(dtoList);
-        return PageResult.of(dtoPage);
+        return new PageResult<>(dtoList, total, page, pageSize);
     }
 
     @Override
     public PageResult<QuestionDTO> getCollectedQuestions(Long userId, int page, int pageSize) {
-        Page<UserCollection> collectionPage = new Page<>(page, pageSize);
-        com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<UserCollection> wrapper
-                = new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<>();
-        wrapper.eq(UserCollection::getUserId, userId);
-        wrapper.orderByDesc(UserCollection::getCreateTime);
-        IPage<UserCollection> collectionResult = userCollectionMapper.selectPage(collectionPage, wrapper);
+        int offset = (page - 1) * pageSize;
+        List<UserCollection> collections = userCollectionMapper.selectByUserIdWithPage(
+                userId, offset, pageSize);
+        Long total = userCollectionMapper.countByUserId(userId);
 
         List<QuestionDTO> dtoList = new ArrayList<>();
-        for (UserCollection uc : collectionResult.getRecords()) {
+        for (UserCollection uc : collections) {
             ExamQuestion question = examQuestionMapper.selectById(uc.getQuestionId());
             if (question != null) {
                 dtoList.add(convertToDTO(question));
             }
         }
 
-        Page<QuestionDTO> dtoPage = new Page<>(page, pageSize, collectionResult.getTotal());
-        dtoPage.setRecords(dtoList);
-        return PageResult.of(dtoPage);
+        return new PageResult<>(dtoList, total, page, pageSize);
     }
 
     @Override
@@ -113,30 +104,19 @@ public class QuestionServiceImpl implements QuestionService {
         LocalDate today = LocalDate.now();
         long seed = today.toEpochDay();
 
-        com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<ExamQuestion> wrapper
-                = new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<>();
-        wrapper.eq(ExamQuestion::getStatus, 1);
-
-        long total = examQuestionMapper.selectCount(wrapper);
+        // 原生 MyBatis 查询总记录数（categoryId 暂时不使用，因为没有分类关联）
+        Long total = examQuestionMapper.countWithFilters(null, null, 1, null);
         if (total == 0) {
             throw new BusinessException("没有可用题目");
         }
 
         Random random = new Random(seed);
-        int skip = random.nextInt((int) total);
+        int skip = random.nextInt(total.intValue());
 
-        Page<ExamQuestion> page = new Page<>(skip / 10 + 1, 10);
-        IPage<ExamQuestion> result = examQuestionMapper.selectPage(page, wrapper);
-
-        ExamQuestion question;
-        if (result.getRecords().isEmpty()) {
-            question = examQuestionMapper.selectList(wrapper).get(0);
-        } else {
-            int index = skip % 10;
-            if (index >= result.getRecords().size()) {
-                index = 0;
-            }
-            question = result.getRecords().get(index);
+        // 使用 LIMIT 1 OFFSET skip 获取每日一题
+        ExamQuestion question = examQuestionMapper.selectByOffset(skip);
+        if (question == null) {
+            question = examQuestionMapper.selectByOffset(0);
         }
 
         DailyQuestionDTO dto = new DailyQuestionDTO();
@@ -148,18 +128,17 @@ public class QuestionServiceImpl implements QuestionService {
 
     @Override
     public PageResult<QuestionDTO> searchQuestions(String keyword, Long categoryId, int page, int pageSize) {
-        Page<ExamQuestion> mpPage = new Page<>(page, pageSize);
-        IPage<ExamQuestion> result = examQuestionMapper.selectPageWithFilters(
-                mpPage, null, null, 1, keyword);
+        int offset = (page - 1) * pageSize;
+        List<ExamQuestion> questions = examQuestionMapper.selectPageWithFilters(
+                offset, pageSize, null, null, 1, keyword);
+        Long total = examQuestionMapper.countWithFilters(null, null, 1, keyword);
 
         List<QuestionDTO> dtoList = new ArrayList<>();
-        for (ExamQuestion q : result.getRecords()) {
+        for (ExamQuestion q : questions) {
             dtoList.add(convertToDTO(q));
         }
 
-        Page<QuestionDTO> dtoPage = new Page<>(page, pageSize, result.getTotal());
-        dtoPage.setRecords(dtoList);
-        return PageResult.of(dtoPage);
+        return new PageResult<>(dtoList, total, page, pageSize);
     }
 
     @Override

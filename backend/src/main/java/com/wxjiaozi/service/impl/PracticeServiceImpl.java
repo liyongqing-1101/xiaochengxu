@@ -265,11 +265,7 @@ public class PracticeServiceImpl implements PracticeService {
             throw new BusinessException("会话数据异常");
         }
 
-        com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<UserAnswerRecord> wrapper
-                = new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<>();
-        wrapper.eq(UserAnswerRecord::getSessionId, params.getSessionId());
-        wrapper.eq(UserAnswerRecord::getUserId, userId);
-        List<UserAnswerRecord> records = userAnswerRecordMapper.selectList(wrapper);
+        List<UserAnswerRecord> records = userAnswerRecordMapper.selectBySessionIdAndUserId(params.getSessionId(), userId);
 
         int totalQuestions = session.getQuestions().size();
         int correctCount = (int) records.stream()

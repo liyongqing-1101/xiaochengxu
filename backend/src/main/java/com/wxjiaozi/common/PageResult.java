@@ -1,9 +1,10 @@
 package com.wxjiaozi.common;
 
-import com.baomidou.mybatisplus.core.metadata.IPage;
-
 import java.util.List;
 
+/**
+ * 分页结果封装（MyBatis 原生版）
+ */
 public class PageResult<T> {
 
     private List<T> list;
@@ -15,6 +16,14 @@ public class PageResult<T> {
     public PageResult() {
     }
 
+    /**
+     * 构造分页结果
+     * @param list 数据列表
+     * @param total 总记录数
+     * @param page 当前页码
+     * @param pageSize 每页大小
+     * @param hasMore 是否有更多
+     */
     public PageResult(List<T> list, long total, int page, int pageSize, boolean hasMore) {
         this.list = list;
         this.total = total;
@@ -23,18 +32,15 @@ public class PageResult<T> {
         this.hasMore = hasMore;
     }
 
-    public static <T> PageResult<T> of(IPage<T> mybatisPage) {
-        long page = mybatisPage.getCurrent();
-        long pageSize = mybatisPage.getSize();
-        long total = mybatisPage.getTotal();
-        boolean hasMore = page * pageSize < total;
-        return new PageResult<>(
-                mybatisPage.getRecords(),
-                total,
-                (int) page,
-                (int) pageSize,
-                hasMore
-        );
+    /**
+     * 构造分页结果（自动计算hasMore）
+     * @param list 数据列表
+     * @param total 总记录数
+     * @param page 当前页码
+     * @param pageSize 每页大小
+     */
+    public PageResult(List<T> list, long total, int page, int pageSize) {
+        this(list, total, page, pageSize, (long) page * pageSize < total);
     }
 
     public List<T> getList() {

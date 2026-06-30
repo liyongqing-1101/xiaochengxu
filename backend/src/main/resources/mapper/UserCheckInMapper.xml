@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.wxjiaozi.mapper.UserCheckInMapper">
+
+    <resultMap id="BaseResultMap" type="com.wxjiaozi.entity.UserCheckIn">
+        <id column="id" property="id"/>
+        <result column="user_id" property="userId"/>
+        <result column="check_date" property="checkDate"/>
+        <result column="created_at" property="createdAt"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, user_id, check_date, created_at
+    </sql>
+
+    <select id="selectById" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM user_check_in
+        WHERE id = #{id}
+    </select>
+
+    <select id="selectByUserIdAndDate" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM user_check_in
+        WHERE user_id = #{userId} AND check_date = #{checkDate}
+    </select>
+
+    <select id="selectByUserId" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM user_check_in
+        WHERE user_id = #{userId}
+        ORDER BY check_date DESC
+    </select>
+
+    <select id="countByUserId" resultType="java.lang.Integer">
+        SELECT COUNT(*) FROM user_check_in WHERE user_id = #{userId}
+    </select>
+
+    <select id="selectLatestByUserId" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM user_check_in
+        WHERE user_id = #{userId}
+        ORDER BY check_date DESC
+        LIMIT 1
+    </select>
+
+    <insert id="insert" parameterType="com.wxjiaozi.entity.UserCheckIn" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO user_check_in (user_id, check_date, created_at)
+        VALUES (#{userId}, #{checkDate}, NOW())
+    </insert>
+
+    <delete id="deleteById">
+        DELETE FROM user_check_in WHERE id = #{id}
+    </delete>
+
+</mapper>

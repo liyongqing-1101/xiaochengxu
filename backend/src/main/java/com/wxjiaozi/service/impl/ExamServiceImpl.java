@@ -37,7 +37,7 @@ public class ExamServiceImpl implements ExamService {
     @Override
     @Cacheable(value = "categories", key = "'all'", unless = "#result == null || #result.isEmpty()")
     public List<ExamCategory> getCategories() {
-        List<ExamCategory> categories = examCategoryMapper.selectList(null);
+        List<ExamCategory> categories = examCategoryMapper.selectAll();
         for (ExamCategory category : categories) {
             List<ExamSubject> subjects = examSubjectMapper.selectByCategoryId(category.getId());
             category.setSubjects(subjects);

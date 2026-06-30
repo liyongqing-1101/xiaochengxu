@@ -1,16 +1,24 @@
 package com.wxjiaozi.mapper;
 
-import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.wxjiaozi.entity.ExamChapter;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
-import org.apache.ibatis.annotations.Select;
 
 import java.util.List;
 
+/**
+ * 章节 Mapper（MyBatis 原生版）
+ */
 @Mapper
-public interface ExamChapterMapper extends BaseMapper<ExamChapter> {
+public interface ExamChapterMapper {
 
-    @Select("SELECT * FROM exam_chapter WHERE subject_id = #{subjectId} ORDER BY sort_order ASC")
+    ExamChapter selectById(@Param("id") Long id);
+
     List<ExamChapter> selectBySubjectId(@Param("subjectId") Long subjectId);
+
+    int insert(ExamChapter chapter);
+
+    int updateById(ExamChapter chapter);
+
+    int deleteById(@Param("id") Long id);
 }

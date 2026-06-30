@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.wxjiaozi.mapper.UserWrongQuestionMapper">
+
+    <resultMap id="BaseResultMap" type="com.wxjiaozi.entity.UserWrongQuestion">
+        <id column="id" property="id"/>
+        <result column="user_id" property="userId"/>
+        <result column="question_id" property="questionId"/>
+        <result column="error_count" property="errorCount"/>
+        <result column="source" property="source"/>
+        <result column="last_wrong_answer" property="lastWrongAnswer"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, user_id, question_id, error_count, source, last_wrong_answer, created_at, updated_at
+    </sql>
+
+    <select id="selectById" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM user_wrong_question
+        WHERE id = #{id}
+    </select>
+
+    <select id="selectByUserId" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM user_wrong_question
+        WHERE user_id = #{userId}
+        ORDER BY updated_at DESC
+    </select>
+
+    <select id="selectByUserIdWithPagination" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM user_wrong_question
+        WHERE user_id = #{userId}
+        ORDER BY updated_at DESC
+        LIMIT #{offset}, #{pageSize}
+    </select>
+
+    <select id="countByUserId" resultType="java.lang.Long">
+        SELECT COUNT(*) FROM user_wrong_question WHERE user_id = #{userId}
+    </select>
+
+    <select id="selectByUserIdAndQuestionId" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM user_wrong_question
+        WHERE user_id = #{userId} AND question_id = #{questionId}
+    </select>
+
+    <insert id="insert" parameterType="com.wxjiaozi.entity.UserWrongQuestion" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO user_wrong_question (
+            user_id, question_id, error_count, source, last_wrong_answer, created_at, updated_at
+        ) VALUES (
+            #{userId}, #{questionId}, #{errorCount}, #{source}, #{lastWrongAnswer}, NOW(), NOW()
+        )
+    </insert>
+
+    <update id="updateById" parameterType="com.wxjiaozi.entity.UserWrongQuestion">
+        UPDATE user_wrong_question
+        <set>
+            <if test="userId != null">user_id = #{userId},</if>
+            <if test="questionId != null">question_id = #{questionId},</if>
+            <if test="errorCount != null">error_count = #{errorCount},</if>
+            <if test="source != null">source = #{source},</if>
+            <if test="lastWrongAnswer != null">last_wrong_answer = #{lastWrongAnswer},</if>
+            updated_at = NOW()
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM user_wrong_question WHERE id = #{id}
+    </delete>
+
+    <delete id="deleteByUserIdAndQuestionId">
+        DELETE FROM user_wrong_question WHERE user_id = #{userId} AND question_id = #{questionId}
+    </delete>
+
+</mapper>

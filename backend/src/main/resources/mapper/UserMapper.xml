@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.wxjiaozi.mapper.UserMapper">
+
+    <resultMap id="BaseResultMap" type="com.wxjiaozi.entity.User">
+        <id column="id" property="id"/>
+        <result column="openid" property="openid"/>
+        <result column="nickname" property="nickname"/>
+        <result column="avatar" property="avatar"/>
+        <result column="phone" property="phone"/>
+        <result column="membership" property="membership"/>
+        <result column="gender" property="gender"/>
+        <result column="status" property="status"/>
+        <result column="username" property="username"/>
+        <result column="password" property="password"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, openid, nickname, avatar, phone, membership, gender, status, username, password, created_at, updated_at
+    </sql>
+
+    <select id="selectById" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM user
+        WHERE id = #{id}
+    </select>
+
+    <select id="selectByOpenid" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM user
+        WHERE openid = #{openid}
+    </select>
+
+    <select id="selectByUsername" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM user
+        WHERE username = #{username}
+    </select>
+
+    <select id="selectAll" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM user
+        ORDER BY created_at DESC
+    </select>
+
+    <insert id="insert" parameterType="com.wxjiaozi.entity.User" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO user (
+            openid, nickname, avatar, phone, membership, gender, status, username, password, created_at, updated_at
+        ) VALUES (
+            #{openid}, #{nickname}, #{avatar}, #{phone}, #{membership}, #{gender}, #{status}, #{username}, #{password}, NOW(), NOW()
+        )
+    </insert>
+
+    <update id="updateById" parameterType="com.wxjiaozi.entity.User">
+        UPDATE user
+        <set>
+            <if test="openid != null">openid = #{openid},</if>
+            <if test="nickname != null">nickname = #{nickname},</if>
+            <if test="avatar != null">avatar = #{avatar},</if>
+            <if test="phone != null">phone = #{phone},</if>
+            <if test="membership != null">membership = #{membership},</if>
+            <if test="gender != null">gender = #{gender},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="username != null">username = #{username},</if>
+            <if test="password != null">password = #{password},</if>
+            updated_at = NOW()
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM user WHERE id = #{id}
+    </delete>
+
+</mapper>

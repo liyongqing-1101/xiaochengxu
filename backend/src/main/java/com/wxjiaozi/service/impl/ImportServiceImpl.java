@@ -2,10 +2,6 @@ package com.wxjiaozi.service.impl;
 
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.crypto.digest.DigestUtil;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
-import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.wxjiaozi.dto.imports.ImportProgressDTO;
@@ -230,11 +226,8 @@ public class ImportServiceImpl implements ImportService {
 
     @Override
     public List<ImportTask> getImportTasks(int page, int pageSize) {
-        Page<ImportTask> p = new Page<>(page, pageSize);
-        LambdaQueryWrapper<ImportTask> wrapper = new LambdaQueryWrapper<>();
-        wrapper.orderByDesc(ImportTask::getCreateTime);
-        IPage<ImportTask> result = importTaskMapper.selectPage(p, wrapper);
-        return result.getRecords();
+        int offset = (page - 1) * pageSize;
+        return importTaskMapper.selectWithPagination(offset, pageSize);
     }
 
     @Override
@@ -295,10 +288,7 @@ public class ImportServiceImpl implements ImportService {
     private List<ExamQuestion> filterDuplicates(List<ExamQuestion> batch) {
         if (existingMd5Cache == null) {
             // 延迟加载: 首次调用时查询所有已有题目的题干MD5
-            List<ExamQuestion> allExisting = examQuestionMapper.selectList(
-                    new LambdaQueryWrapper<ExamQuestion>()
-                            .select(ExamQuestion::getStem)
-            );
+            List<ExamQuestion> allExisting = examQuestionMapper.selectAllForDeduplication();
             existingMd5Cache = allExisting.stream()
                     .map(q -> DigestUtil.md5Hex(q.getStem()))
                     .collect(Collectors.toSet());
@@ -320,21 +310,11 @@ public class ImportServiceImpl implements ImportService {
      * 更新科目题目总数
      */
     private void updateSubjectQuestionCount(Long categoryId) {
-        List<ExamSubject> subjects = examSubjectMapper.selectList(
-                new LambdaQueryWrapper<ExamSubject>()
-                        .eq(ExamSubject::getCategoryId, categoryId)
-        );
+        List<ExamSubject> subjects = examSubjectMapper.selectByCategoryId(categoryId);
         for (ExamSubject subject : subjects) {
-            Long count = examQuestionMapper.selectCount(
-                    new LambdaQueryWrapper<ExamQuestion>()
-                            .eq(ExamQuestion::getSubjectId, subject.getId())
-                            .eq(ExamQuestion::getStatus, 1)
-            );
-            examSubjectMapper.update(null,
-                    new LambdaUpdateWrapper<ExamSubject>()
-                            .eq(ExamSubject::getId, subject.getId())
-                            .set(ExamSubject::getTotalQuestions, count.intValue())
-            );
+            Long count = examQuestionMapper.countBySubjectAndStatus(subject.getId(), 1);
+            subject.setTotalQuestions(count.intValue());
+            examSubjectMapper.updateById(subject);
         }
         log.info("已更新分类[{}]下{}个科目的题目计数", categoryId, subjects.size());
     }

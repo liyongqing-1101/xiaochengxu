@@ -1,20 +1,29 @@
 package com.wxjiaozi.entity;
 
-import com.baomidou.mybatisplus.annotation.TableName;
-import com.wxjiaozi.common.BaseEntity;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
-import lombok.EqualsAndHashCode;
-import lombok.experimental.Accessors;
+import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
+
+/**
+ * 管理员（MyBatis 原生版）
+ */
 @Data
-@EqualsAndHashCode(callSuper = true)
-@Accessors(chain = true)
-@TableName("admin_user")
-public class AdminUser extends BaseEntity {
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class AdminUser {
 
+    private Long id;
     private String username;
+    @JsonIgnore
     private String password;
     private String nickname;
     private String role;
     private Integer status;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 }
