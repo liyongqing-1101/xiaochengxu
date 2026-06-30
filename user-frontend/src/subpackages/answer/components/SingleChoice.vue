@@ -3,17 +3,17 @@
   <view class="single-choice">
     <view
       v-for="option in options"
-      :key="option.id"
+      :key="option.key"
       class="single-choice__option"
-      :class="getOptionClass(option.id)"
-      @tap="handleSelect(option.id)"
+      :class="getOptionClass(option.key)"
+      @tap="handleSelect(option.key)"
     >
-      <view class="single-choice__radio" :class="getRadioClass(option.id)">
-        <text class="single-choice__radio-label">{{ option.label }}</text>
+      <view class="single-choice__radio" :class="getRadioClass(option.key)">
+        <text class="single-choice__radio-label">{{ option.key }}</text>
       </view>
-      <text class="single-choice__content">{{ option.content }}</text>
-      <text v-if="isCorrect(option.id)" class="single-choice__icon">✓</text>
-      <text v-if="isWrong(option.id)" class="single-choice__icon single-choice__icon--wrong">✗</text>
+      <text class="single-choice__content">{{ option.value }}</text>
+      <text v-if="isCorrect(option.key)" class="single-choice__icon">✓</text>
+      <text v-if="isWrong(option.key)" class="single-choice__icon single-choice__icon--wrong">✗</text>
     </view>
   </view>
 </template>
@@ -32,15 +32,15 @@ const emit = defineEmits<{
   select: [optionId: string]
 }>()
 
-function getOptionClass(optionId: string): Record<string, boolean> {
+function getOptionClass(optionKey: string): Record<string, boolean> {
   if (!props.submitted) {
     return {
-      'single-choice__option--selected': props.selectedOptions.includes(optionId),
+      'single-choice__option--selected': props.selectedOptions.includes(optionKey),
     }
   }
 
-  const isSelected = props.selectedOptions.includes(optionId)
-  const isCorrectAnswer = props.correctAnswer.includes(optionId)
+  const isSelected = props.selectedOptions.includes(optionKey)
+  const isCorrectAnswer = props.correctAnswer.includes(optionKey)
 
   return {
     'single-choice__option--correct': isCorrectAnswer,
@@ -49,32 +49,32 @@ function getOptionClass(optionId: string): Record<string, boolean> {
   }
 }
 
-function getRadioClass(optionId: string): Record<string, boolean> {
+function getRadioClass(optionKey: string): Record<string, boolean> {
   return {
-    'single-choice__radio--selected': props.selectedOptions.includes(optionId),
-    'single-choice__radio--correct': props.submitted && props.correctAnswer.includes(optionId),
+    'single-choice__radio--selected': props.selectedOptions.includes(optionKey),
+    'single-choice__radio--correct': props.submitted && props.correctAnswer.includes(optionKey),
     'single-choice__radio--wrong':
       props.submitted &&
-      props.selectedOptions.includes(optionId) &&
-      !props.correctAnswer.includes(optionId),
+      props.selectedOptions.includes(optionKey) &&
+      !props.correctAnswer.includes(optionKey),
   }
 }
 
-function isCorrect(optionId: string): boolean {
-  return props.submitted && props.correctAnswer.includes(optionId)
+function isCorrect(optionKey: string): boolean {
+  return props.submitted && props.correctAnswer.includes(optionKey)
 }
 
-function isWrong(optionId: string): boolean {
+function isWrong(optionKey: string): boolean {
   return (
     props.submitted &&
-    props.selectedOptions.includes(optionId) &&
-    !props.correctAnswer.includes(optionId)
+    props.selectedOptions.includes(optionKey) &&
+    !props.correctAnswer.includes(optionKey)
   )
 }
 
-function handleSelect(optionId: string): void {
+function handleSelect(optionKey: string): void {
   if (props.submitted) return
-  emit('select', optionId)
+  emit('select', optionKey)
 }
 </script>
 

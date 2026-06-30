@@ -56,14 +56,13 @@
         <QuestionStem
           :stem="currentQuestion.stem"
           :question-type="currentQuestion.type"
-          :difficulty="currentQuestion.difficulty"
         />
 
         <!-- 动态题型组件 -->
         <!-- [EXTENSION-POINT] 新增题型在此添加映射 -->
         <SingleChoice
           v-if="currentQuestion.type === 1"
-          :options="currentQuestion.options"
+          :options="currentQuestion.optionList"
           :selected-options="selectedOptions"
           :correct-answer="submittedCorrectAnswer"
           :submitted="isCurrentSubmitted"
@@ -72,7 +71,7 @@
 
         <MultiChoice
           v-else-if="currentQuestion.type === 2"
-          :options="currentQuestion.options"
+          :options="currentQuestion.optionList"
           :selected-options="selectedOptions"
           :correct-answer="submittedCorrectAnswer"
           :submitted="isCurrentSubmitted"
@@ -81,7 +80,7 @@
 
         <TrueFalse
           v-else-if="currentQuestion.type === 3"
-          :options="currentQuestion.options"
+          :options="trueFalseOptions"
           :selected-options="selectedOptions"
           :correct-answer="submittedCorrectAnswer"
           :submitted="isCurrentSubmitted"
@@ -94,7 +93,6 @@
           :is-correct="submitResult?.isCorrect ?? false"
           :correct-answer="submitResult?.correctAnswer ?? []"
           :explanation="submitResult?.explanation ?? ''"
-          :tags="currentQuestion.tags"
         />
       </view>
 
@@ -193,6 +191,12 @@ const scrollIntoView = ref('')
 const submitResult = ref<SubmitResult | null>(null)
 const submittedCorrectAnswer = ref<string[]>([])
 const subjectName = ref('')
+
+// 判断题固定选项
+const trueFalseOptions = [
+  { key: 'true', value: '正确' },
+  { key: 'false', value: '错误' },
+]
 
 // 随机模式 30 分钟，其他模式 45 分钟
 const RANDOM_EXAM_SECONDS = 30 * 60

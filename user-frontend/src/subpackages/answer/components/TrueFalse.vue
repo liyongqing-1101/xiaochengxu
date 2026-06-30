@@ -3,13 +3,13 @@
   <view class="true-false">
     <view
       v-for="option in options"
-      :key="option.id"
+      :key="option.key"
       class="true-false__btn"
-      :class="getBtnClass(option.id)"
-      @tap="handleSelect(option.id)"
+      :class="getBtnClass(option.key)"
+      @tap="handleSelect(option.key)"
     >
-      <text class="true-false__emoji">{{ option.id === 'true' || option.content.includes('正确') ? '✓' : '✗' }}</text>
-      <text class="true-false__label">{{ option.content }}</text>
+      <text class="true-false__emoji">{{ option.key === 'true' ? '✓' : '✗' }}</text>
+      <text class="true-false__label">{{ option.value }}</text>
     </view>
   </view>
 </template>
@@ -28,15 +28,15 @@ const emit = defineEmits<{
   select: [optionId: string]
 }>()
 
-function getBtnClass(optionId: string): Record<string, boolean> {
+function getBtnClass(optionKey: string): Record<string, boolean> {
   if (!props.submitted) {
     return {
-      'true-false__btn--selected': props.selectedOptions.includes(optionId),
+      'true-false__btn--selected': props.selectedOptions.includes(optionKey),
     }
   }
 
-  const isSelected = props.selectedOptions.includes(optionId)
-  const isCorrectAnswer = props.correctAnswer.includes(optionId)
+  const isSelected = props.selectedOptions.includes(optionKey)
+  const isCorrectAnswer = props.correctAnswer.includes(optionKey)
 
   return {
     'true-false__btn--correct': isCorrectAnswer,
@@ -44,9 +44,9 @@ function getBtnClass(optionId: string): Record<string, boolean> {
   }
 }
 
-function handleSelect(optionId: string): void {
+function handleSelect(optionKey: string): void {
   if (props.submitted) return
-  emit('select', optionId)
+  emit('select', optionKey)
 }
 </script>
 

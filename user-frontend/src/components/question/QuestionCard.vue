@@ -1,17 +1,13 @@
 <template>
   <!-- 题目卡片组件 — 纯展示 -->
   <view class="question-card" :class="{ 'question-card--active': active }">
-    <!-- 头部: 题型标签 + 难度标签 + 科目 -->
+    <!-- 头部: 题型标签 -->
     <view class="question-card__header">
       <view class="question-card__tags">
         <text class="question-card__type-tag" :style="{ color: typeMeta.color, background: typeMeta.color + '1A' }">
           {{ typeMeta.label }}
         </text>
-        <text class="question-card__difficulty-tag" :style="{ color: diffColor }">
-          {{ diffLabel }}
-        </text>
       </view>
-      <text v-if="showSubject" class="question-card__subject">{{ question.subjectName }}</text>
     </view>
 
     <!-- 题干 -->
@@ -22,23 +18,12 @@
     <!-- 选项列表(预览模式, 不显示交互) -->
     <view v-if="showOptions" class="question-card__options">
       <view
-        v-for="opt in question.options"
-        :key="opt.id"
+        v-for="opt in question.optionList"
+        :key="opt.key"
         class="question-card__option"
       >
-        <text class="question-card__option-label">{{ opt.label }}.</text>
-        <text class="question-card__option-content">{{ opt.content }}</text>
-      </view>
-    </view>
-
-    <!-- 底部: 知识点标签 + 操作区 -->
-    <view v-if="showFooter" class="question-card__footer">
-      <view class="question-card__knowledge-tags">
-        <text
-          v-for="tag in question.tags.slice(0, 3)"
-          :key="tag"
-          class="question-card__tag"
-        >{{ tag }}</text>
+        <text class="question-card__option-label">{{ opt.key }}.</text>
+        <text class="question-card__option-content">{{ opt.value }}</text>
       </view>
     </view>
 
@@ -55,32 +40,25 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { Question } from '@/types/question'
-import { QUESTION_TYPE_CONFIG, DIFFICULTY_CONFIG } from '@/types/question'
-import type { Difficulty } from '@/types/enums'
+import { QUESTION_TYPE_CONFIG } from '@/types/question'
 
 const props = withDefaults(defineProps<{
   question: Question
   active?: boolean
-  showSubject?: boolean
   showOptions?: boolean
-  showFooter?: boolean
   /** 错题本模式 */
   showErrorInfo?: boolean
   errorCount?: number
   lastWrongAnswer?: string
 }>(), {
   active: false,
-  showSubject: true,
   showOptions: false,
-  showFooter: true,
   showErrorInfo: false,
   errorCount: 0,
   lastWrongAnswer: '',
 })
 
 const typeMeta = computed(() => QUESTION_TYPE_CONFIG[props.question.type])
-const diffColor = computed(() => DIFFICULTY_CONFIG[props.question.difficulty as Difficulty]?.color || '#999')
-const diffLabel = computed(() => DIFFICULTY_CONFIG[props.question.difficulty as Difficulty]?.label || '')
 </script>
 
 <style lang="scss" scoped>

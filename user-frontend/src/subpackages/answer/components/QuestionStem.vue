@@ -1,13 +1,10 @@
 <template>
   <!-- 题目题干展示组件 -->
   <view class="question-stem">
-    <!-- 题型 + 难度标签 -->
+    <!-- 题型标签 -->
     <view class="question-stem__header">
       <text class="question-stem__type-tag" :style="{ color: typeMeta.color, background: typeMeta.color + '1A' }">
         {{ typeMeta.label }}
-      </text>
-      <text class="question-stem__difficulty" :style="{ color: diffColor }">
-        {{ diffLabel }}
       </text>
     </view>
 
@@ -20,18 +17,15 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { QUESTION_TYPE_CONFIG, DIFFICULTY_CONFIG } from '@/types/question'
-import type { QuestionType, Difficulty } from '@/types/enums'
+import { QUESTION_TYPE_CONFIG } from '@/types/question'
+import type { QuestionType } from '@/types/enums'
 
 const props = defineProps<{
   stem: string
   questionType: QuestionType
-  difficulty: Difficulty
 }>()
 
 const typeMeta = computed(() => QUESTION_TYPE_CONFIG[props.questionType])
-const diffColor = computed(() => DIFFICULTY_CONFIG[props.difficulty]?.color || '#999')
-const diffLabel = computed(() => DIFFICULTY_CONFIG[props.difficulty]?.label || '')
 </script>
 
 <style lang="scss" scoped>

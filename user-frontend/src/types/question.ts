@@ -1,43 +1,31 @@
-import type { CategoryId, QuestionType, Difficulty } from './enums'
+import type { QuestionType } from './enums'
 
 /** 题目选项 */
 export interface QuestionOption {
   /** 选项标识, 如 "A", "B", "C", "D" */
-  id: string
-  /** 选项标签 */
-  label: string
+  key: string
   /** 选项内容(富文本) */
-  content: string
+  value: string
 }
 
 /** 题目 */
 export interface Question {
   /** 题目ID */
   id: number
-  /** 所属考试大类 */
-  categoryId: CategoryId
   /** 所属科目ID */
   subjectId: number
-  /** 所属科目名称 */
-  subjectName?: string
-  /** 所属章节ID */
-  chapterId: number
-  /** 所属知识点ID */
-  knowledgePointId: number
   /** 题目类型 */
   type: QuestionType
   /** 题干(富文本) */
   stem: string
   /** 选项列表 */
-  options: QuestionOption[]
-  /** 正确答案 */
-  answer: string[]
+  optionList: QuestionOption[]
+  /** 正确答案：单选存单个字母，多选存逗号分隔，判断存"true"/"false" */
+  answer: string
   /** 答案解析(富文本) */
   explanation: string
-  /** 难度 1-5 */
-  difficulty: Difficulty
-  /** 知识点标签 */
-  tags: string[]
+  /** 状态：0=禁用, 1=正常 */
+  status: number
   /** 是否已收藏 */
   collected?: boolean
 }
@@ -60,8 +48,6 @@ export interface UserAnswer {
 export interface QuestionSession {
   /** 会话ID */
   sessionId: string
-  /** 考试大类 */
-  categoryId: CategoryId
   /** 科目ID */
   subjectId: number
   /** 题目列表 */
@@ -70,10 +56,6 @@ export interface QuestionSession {
   currentIndex: number
   /** 用户作答记录映射 */
   answers: Record<number, UserAnswer>
-  /** 开始时间 */
-  startTime: number
-  /** 结束时间 */
-  endTime?: number
 }
 
 /** 开始答题会话参数 */
@@ -167,9 +149,3 @@ export const QUESTION_TYPE_CONFIG: Record<QuestionType, { label: string; icon: s
   [QuestionType.TRUE_FALSE]: { label: '判断题', icon: 'swap', color: '#52C41A' },
 }
 
-/** 难度显示配置 */
-export const DIFFICULTY_CONFIG: Record<Difficulty, { label: string; color: string }> = {
-  [Difficulty.EASY]: { label: '简单', color: '#52C41A' },
-  [Difficulty.MEDIUM]: { label: '中等', color: '#FAAD14' },
-  [Difficulty.HARD]: { label: '困难', color: '#FF4D4F' },
-}

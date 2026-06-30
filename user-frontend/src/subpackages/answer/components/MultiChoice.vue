@@ -8,17 +8,17 @@
 
     <view
       v-for="option in options"
-      :key="option.id"
+      :key="option.key"
       class="multi-choice__option"
-      :class="getOptionClass(option.id)"
-      @tap="handleToggle(option.id)"
+      :class="getOptionClass(option.key)"
+      @tap="handleToggle(option.key)"
     >
-      <view class="multi-choice__checkbox" :class="getCheckboxClass(option.id)">
-        <text v-if="selectedOptions.includes(option.id)" class="multi-choice__check-mark">✓</text>
+      <view class="multi-choice__checkbox" :class="getCheckboxClass(option.key)">
+        <text v-if="selectedOptions.includes(option.key)" class="multi-choice__check-mark">✓</text>
       </view>
-      <text class="multi-choice__content">{{ option.content }}</text>
-      <text v-if="isCorrect(option.id)" class="multi-choice__icon">✓</text>
-      <text v-if="isWrong(option.id)" class="multi-choice__icon multi-choice__icon--wrong">✗</text>
+      <text class="multi-choice__content">{{ option.value }}</text>
+      <text v-if="isCorrect(option.key)" class="multi-choice__icon">✓</text>
+      <text v-if="isWrong(option.key)" class="multi-choice__icon multi-choice__icon--wrong">✗</text>
     </view>
   </view>
 </template>
