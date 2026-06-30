@@ -1,6 +1,11 @@
 <template>
+  <!--
+    首页 — 高校教资题库
+    基准界面: 顶部 → 功能栏 → 快捷横幅 → 每日一题 → 科目四宫格 → 快捷操作 → TabBar
+    已移除: CategorySwitch 弹窗、RandomExamPopup 弹窗
+  -->
   <view class="home-page">
-    <!-- ========== 顶部区域 ========== -->
+    <!-- ========== 1. 顶部区域 ========== -->
     <view class="home-header">
       <view class="home-header__status" :style="{ height: statusBarHeight + 'px' }" />
       <view class="home-header__main">
@@ -22,8 +27,8 @@
       <view class="home-header__capsule-placeholder" />
     </view>
 
-    <!-- ========== 考试类型切换（替代原搜索栏位置） ========== -->
-    <view class="home-category-bar" @tap="showCategorySwitch = true">
+    <!-- ========== 2. 考试类型切换栏 ========== -->
+    <view class="home-category-bar">
       <view class="home-category-bar__left">
         <text class="home-category-bar__icon">📂</text>
         <text class="home-category-bar__text">{{ examStore.currentCategoryMeta.name }}</text>
@@ -31,12 +36,17 @@
       <text class="home-category-bar__arrow">切换 ›</text>
     </view>
 
-    <!-- ========== 功能横幅 ========== -->
+    <!-- ========== 3. 快捷功能区（横幅滚动） ========== -->
     <view class="home-banner">
       <scroll-view scroll-x class="home-banner__scroll" :show-scrollbar="false">
         <view class="home-banner__track">
-          <view v-for="(banner, i) in banners" :key="i" class="home-banner__item"
-            :style="{ background: banner.bg }" @tap="handleBannerClick(banner)">
+          <view
+            v-for="(banner, i) in banners"
+            :key="i"
+            class="home-banner__item"
+            :style="{ background: banner.bg }"
+            @tap="handleBannerClick(banner)"
+          >
             <text class="home-banner__emoji">{{ banner.emoji }}</text>
             <text class="home-banner__text">{{ banner.text }}</text>
           </view>
@@ -44,7 +54,7 @@
       </scroll-view>
     </view>
 
-    <!-- ========== 每日一题 ========== -->
+    <!-- ========== 每日一题卡片 ========== -->
     <DailyQuestionCard
       :daily-question="dailyQuestion"
       :answered="userStore.todayCheckedIn"
@@ -52,7 +62,7 @@
       @go-answer="handleDailyQuestion"
     />
 
-    <!-- ========== 科目题库（4 个固定科目 + X/Y 进度） ========== -->
+    <!-- ========== 4. 科目四宫格 ========== -->
     <view class="home-section">
       <view class="home-section__header">
         <text class="home-section__title">科目题库</text>
@@ -84,7 +94,7 @@
       </view>
     </view>
 
-    <!-- ========== 底部功能按钮 ========== -->
+    <!-- ========== 5. 快捷操作栏 ========== -->
     <view class="home-tool-grid">
       <view class="home-tool-item" @tap="handleToolClick('wrong-book')">
         <view class="home-tool-item__icon-wrap" style="background: #FFF1F0;">
@@ -95,7 +105,7 @@
           {{ wrongCount > 99 ? '99+' : wrongCount }}
         </view>
       </view>
-      <view class="home-tool-item" @tap="showRandomPopup = true">
+      <view class="home-tool-item" @tap="handleToolClick('random')">
         <view class="home-tool-item__icon-wrap" style="background: #EBF3FC;">
           <text class="home-tool-item__emoji">🎲</text>
         </view>
@@ -115,31 +125,14 @@
       </view>
     </view>
 
+    <!-- 安全区域底部 -->
     <view class="home-safe-bottom" />
 
-    <!-- ========== 底部 TabBar ========== -->
+    <!-- ========== 6. 底部 TabBar ========== -->
     <CustomTabbar
       current-path="/pages/index/index"
       :wrong-count="wrongCount"
       @change="handleTabChange"
-    />
-
-    <!-- 分类切换弹窗 -->
-    <CategorySwitch
-      :visible="showCategorySwitch"
-      :current-id="examStore.currentCategoryId"
-      @close="showCategorySwitch = false"
-      @select="handleCategorySwitch"
-    />
-
-    <!-- 随机刷题弹窗 -->
-    <RandomExamPopup
-      :visible="showRandomPopup"
-      :subjects="displaySubjects"
-      :selected-id="randomSubjectId"
-      @close="showRandomPopup = false"
-      @select="handleRandomSubjectSelect"
-      @start="handleRandomStart"
     />
   </view>
 </template>
@@ -156,8 +149,6 @@ import type { DailyQuestion } from '@/types/question'
 import DailyQuestionCard from '@components/question/DailyQuestionCard.vue'
 import ProgressBar from '@components/question/ProgressBar.vue'
 import CustomTabbar from '@components/tabbar/CustomTabbar.vue'
-import CategorySwitch from '@components/category/CategorySwitch.vue'
-import RandomExamPopup from '@components/exam/RandomExamPopup.vue'
 
 const userStore = useUserStore()
 const examStore = useExamStore()
@@ -165,15 +156,14 @@ const wrongBookStore = useWrongBookStore()
 const { doCheckIn } = useCheckIn()
 
 const systemInfo = uni.getSystemInfoSync()
-const statusBarHeight = systemInfo.statusBarHeight || 20
+const statusBarHeight: number = systemInfo.statusBarHeight || 20
 
-const countdownDays = ref(0)
+const countdownDays = ref<number>(0)
 const dailyQuestion = ref<DailyQuestion | null>(null)
-const showCategorySwitch = ref(false)
-const showRandomPopup = ref(false)
-const randomSubjectId = ref<number | null>(null)
 
+// ═══════════════════════════════════════
 // 4 个固定科目
+// ═══════════════════════════════════════
 const FIXED_SUBJECTS = [
   { id: 1, name: '高等教育学', icon: '📖', color: '#4A90D9' },
   { id: 2, name: '高等教育法规和政策', icon: '⚖️', color: '#52C41A' },
@@ -197,7 +187,7 @@ const displaySubjects = computed<Subject[]>(() => {
   })
 })
 
-const wrongCount = computed(() => wrongBookStore.totalCount)
+const wrongCount = computed<number>(() => wrongBookStore.totalCount)
 
 const banners = [
   { emoji: '🔥', text: '每日打卡赢积分', bg: 'linear-gradient(135deg, #FFF1F0, #FFE7E5)' },
@@ -276,6 +266,16 @@ function handleToolClick(type: string): void {
     case 'wrong-book':
       uni.navigateTo({ url: '/subpackages/wrong-book/pages/index' })
       break
+    case 'random':
+      // 直接随机刷题，不弹弹窗
+      if (displaySubjects.value.length === 0) {
+        uni.showToast({ title: '暂无可用科目', icon: 'none' })
+        return
+      }
+      uni.navigateTo({
+        url: `/subpackages/answer/pages/index?subjectId=${displaySubjects.value[0].id}&mode=random`,
+      })
+      break
     case 'daily':
       handleDailyQuestion()
       break
@@ -289,35 +289,11 @@ function handleTabChange(path: string): void {
   uni.switchTab({ url: path })
 }
 
-function handleCategorySwitch(id: number): void {
-  examStore.switchCategory(id)
-  loadPageData()
-}
-
-// ═══════════════════════════════════════
-// 随机刷题
-// ═══════════════════════════════════════
-function handleRandomSubjectSelect(id: number): void {
-  randomSubjectId.value = id
-}
-
-function handleRandomStart(): void {
-  if (!randomSubjectId.value) {
-    uni.showToast({ title: '请选择科目', icon: 'none' })
-    return
-  }
-  showRandomPopup.value = false
-  uni.navigateTo({
-    url: `/subpackages/answer/pages/index?subjectId=${randomSubjectId.value}&mode=random`,
-  })
-}
-
 onMounted(() => {
   loadPageData()
 })
 
 onShow(() => {
-  // 先从 storage 恢复登录态（支持登录页绕过 store 写入 token 的场景）
   userStore.restoreSession()
   if (!userStore.isLoggedIn) {
     uni.reLaunch({ url: '/pages/login/index' })
@@ -332,7 +308,7 @@ onShow(() => {
 }
 
 // ═══════════════════════════════════════
-// 顶部区域
+// 1. 顶部区域
 // ═══════════════════════════════════════
 .home-header {
   position: relative;
@@ -409,7 +385,7 @@ onShow(() => {
 }
 
 // ═══════════════════════════════════════
-// 考试类型切换栏
+// 2. 考试类型切换栏
 // ═══════════════════════════════════════
 .home-category-bar {
   @include flex-between;
@@ -441,7 +417,7 @@ onShow(() => {
 }
 
 // ═══════════════════════════════════════
-// 功能横幅
+// 3. 快捷功能横幅
 // ═══════════════════════════════════════
 .home-banner {
   margin: 0 $spacing-base $spacing-md;
@@ -473,7 +449,7 @@ onShow(() => {
 }
 
 // ═══════════════════════════════════════
-// 科目题库网格
+// 4. 科目题库四宫格
 // ═══════════════════════════════════════
 .home-section {
   margin: 0 $spacing-base $spacing-md;
@@ -530,7 +506,7 @@ onShow(() => {
 }
 
 // ═══════════════════════════════════════
-// 底部功能按钮
+// 5. 快捷操作栏
 // ═══════════════════════════════════════
 .home-tool-grid {
   display: grid;
@@ -578,7 +554,7 @@ onShow(() => {
 }
 
 // ═══════════════════════════════════════
-// 安全区域
+// 安全区域底部
 // ═══════════════════════════════════════
 .home-safe-bottom {
   height: calc($tabbar-height + env(safe-area-inset-bottom) + $spacing-md);
