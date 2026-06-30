@@ -202,49 +202,43 @@ public class ExcelImportUtil {
      */
     private static ExamQuestion convertToEntity(QuestionImportRow row, Long categoryId) {
         ExamQuestion q = new ExamQuestion();
-        q.setCategoryId(categoryId);
         q.setSubjectId(row.getSubjectId());
         q.setType(row.getType());
         q.setStem(row.getStem());
 
-        if (row.getType() != 3) {
-            q.setOptionA(row.getOptionA());
-            q.setOptionB(row.getOptionB());
-            q.setOptionC(row.getOptionC());
-            q.setOptionD(row.getOptionD());
-        }
-
-        // 转换答案为JSON数组格式
-        q.setAnswer(convertAnswerToJson(row.getAnswer(), row.getType()));
+        // 转换答案为新存储格式
+        q.setAnswer(convertAnswerFormat(row.getAnswer(), row.getType()));
 
         q.setExplanation(row.getExplanation());
-        q.setDifficulty(row.getDifficulty() != null ? row.getDifficulty() : 2);
         q.setStatus(1); // 默认上架
+
+        // TODO: optionList 从旧选项字段转换
+        // q.setOptionList(convertToOptionList(row));
 
         return q;
     }
 
     /**
-     * 将答案字符串转为JSON数组
-     * 单选"A" -> ["A"], 多选"A,C" -> ["A","C"], 判断"T" -> ["T"]
+     * 将答案字符串转换为新存储格式
+     * 单选"A" -> "A"
+     * 多选"A,C" -> "A,C"
+     * 判断"T"/"F" -> "true"/"false"
      */
-    public static String convertAnswerToJson(String answer, int type) {
+    public static String convertAnswerFormat(String answer, int type) {
+        if (answer == null) return null;
+        String trimmed = answer.trim();
+        // 判断题
         if (type == 3) {
-            return "[\"" + answer + "\"]";
-        }
-        if (type == 2) {
-            // 多选: "A,C" -> ["A","C"]
-            String[] parts = answer.split("[,，]");
-            StringBuilder sb = new StringBuilder("[");
-            for (int i = 0; i < parts.length; i++) {
-                if (i > 0) sb.append(",");
-                sb.append("\"").append(parts[i].trim()).append("\"");
+            if ("T".equalsIgnoreCase(trimmed) || "TRUE".equalsIgnoreCase(trimmed)) {
+                return "true";
             }
-            sb.append("]");
-            return sb.toString();
+            if ("F".equalsIgnoreCase(trimmed) || "FALSE".equalsIgnoreCase(trimmed)) {
+                return "false";
+            }
+            return "true"; // 默认
         }
-        // 单选: "A" -> ["A"]
-        return "[\"" + answer.trim() + "\"]";
+        // 多选/单选: 字母大写，保持逗号分隔格式
+        return trimmed.toUpperCase();
     }
 
     /**

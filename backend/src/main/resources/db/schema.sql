@@ -65,34 +65,22 @@ CREATE TABLE IF NOT EXISTS exam_tag (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='知识点标签';
 
 -- ============================================================
--- 5. 题目 (核心表)
+-- 5. 题目 (核心表 v2.0 重构版)
 -- ============================================================
 CREATE TABLE IF NOT EXISTS exam_question (
     id              BIGINT PRIMARY KEY AUTO_INCREMENT,
-    category_id     BIGINT NOT NULL COMMENT '考试大类ID',
-    subject_id      BIGINT NOT NULL COMMENT '科目ID',
-    chapter_id      BIGINT COMMENT '章节ID',
-    tag_id          BIGINT COMMENT '知识点标签ID',
-    type            TINYINT NOT NULL COMMENT '题型: 1单选 2多选 3判断',
-    stem            TEXT NOT NULL COMMENT '题干(HTML)',
-    option_a        VARCHAR(500) COMMENT '选项A',
-    option_b        VARCHAR(500) COMMENT '选项B',
-    option_c        VARCHAR(500) COMMENT '选项C',
-    option_d        VARCHAR(500) COMMENT '选项D',
-    answer          VARCHAR(50) NOT NULL COMMENT '正确答案 JSON数组: ["A"] 或 ["A","C"] 或 ["T"]/["F"]',
-    explanation     TEXT COMMENT '解析(HTML)',
-    difficulty      TINYINT DEFAULT 2 COMMENT '难度: 1简单 2中等 3困难',
-    status          TINYINT DEFAULT 1 COMMENT '状态: 0下架 1上架',
-    stem_images     VARCHAR(1000) COMMENT '题干图片URL JSON数组',
-    created_at      DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at      DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    INDEX idx_category_type (category_id, type),
-    INDEX idx_subject (subject_id),
-    INDEX idx_chapter (chapter_id),
-    INDEX idx_tag (tag_id),
-    INDEX idx_status (status),
+    subject_id      BIGINT NOT NULL COMMENT '科目ID：1=高等教育学 2=高等教育法规和政策 3=教师伦理学 4=大学心理学',
+    type            TINYINT NOT NULL COMMENT '题型：1=单选题，2=多选题，3=判断题',
+    stem            TEXT NOT NULL COMMENT '题干内容（支持HTML格式）',
+    option_list     JSON NULL COMMENT '题目选项数组，存储格式：[{"key":"A","value":"选项内容"},{"key":"E","value":"选项内容"}]，兼容A~G多选项；判断题此字段为NULL',
+    answer          VARCHAR(50) NOT NULL COMMENT '正确答案：单选存单个字母如"A"；多选存逗号分隔如"A,C,E,G"；判断存"true"或"false"',
+    explanation     TEXT NULL COMMENT '答案解析（支持HTML格式）',
+    status          TINYINT DEFAULT 1 COMMENT '状态：0=禁用，1=正常（抽卷、统计时仅过滤status=0的数据）',
+    created_at      DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    updated_at      DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    INDEX idx_subject_type (subject_id, type),
     FULLTEXT INDEX ft_stem (stem)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='题目';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='题目表（v2.0 重构版）';
 
 -- ============================================================
 -- 6. 用户（支持微信登录 + 用户名密码登录）

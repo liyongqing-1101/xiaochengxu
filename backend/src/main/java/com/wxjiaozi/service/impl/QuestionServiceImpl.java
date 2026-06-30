@@ -1,7 +1,6 @@
 package com.wxjiaozi.service.impl;
 
 import cn.hutool.core.util.StrUtil;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.wxjiaozi.common.BusinessException;
@@ -43,63 +42,42 @@ public class QuestionServiceImpl implements QuestionService {
     }
 
     @Override
-    public PageResult<QuestionDTO> getQuestionList(Long categoryId, Long subjectId, Long chapterId, Long tagId,
-                                                    Integer type, Integer difficulty, String keyword,
-                                                    int page, int pageSize) {
-        LambdaQueryWrapper<ExamQuestion> wrapper = new LambdaQueryWrapper<>();
-        if (categoryId != null) {
-            wrapper.eq(ExamQuestion::getCategoryId, categoryId);
-        }
-        if (subjectId != null) {
-            wrapper.eq(ExamQuestion::getSubjectId, subjectId);
-        }
-        if (chapterId != null) {
-            wrapper.eq(ExamQuestion::getChapterId, chapterId);
-        }
-        if (tagId != null) {
-            wrapper.eq(ExamQuestion::getTagId, tagId);
-        }
-        if (type != null) {
-            wrapper.eq(ExamQuestion::getType, type);
-        }
-        if (difficulty != null) {
-            wrapper.eq(ExamQuestion::getDifficulty, difficulty);
-        }
-        if (StrUtil.isNotBlank(keyword)) {
-            wrapper.like(ExamQuestion::getStem, keyword);
-        }
-        wrapper.orderByDesc(ExamQuestion::getId);
-
+    public PageResult<QuestionDTO> getQuestionList(Long subjectId, Integer type,
+                                                   Integer status, String keyword, int page, int pageSize) {
         Page<ExamQuestion> mpPage = new Page<>(page, pageSize);
-        IPage<ExamQuestion> result = examQuestionMapper.selectPage(mpPage, wrapper);
+        IPage<ExamQuestion> result = examQuestionMapper.selectPageWithFilters(
+                mpPage, subjectId, type, status, keyword);
 
-        List<QuestionDTO> list = new ArrayList<>();
+        List<QuestionDTO> dtoList = new ArrayList<>();
         for (ExamQuestion q : result.getRecords()) {
-            list.add(convertToDTO(q));
+            dtoList.add(convertToDTO(q));
         }
 
-        return new PageResult<>(list, result.getTotal(), (int)result.getCurrent(), (int)result.getSize(),
-                (long) (int)result.getCurrent() * (int)result.getSize() < result.getTotal());
+        Page<QuestionDTO> dtoPage = new Page<>(page, pageSize, result.getTotal());
+        dtoPage.setRecords(dtoList);
+        return PageResult.of(dtoPage);
     }
 
     @Override
     public PageResult<QuestionDTO> getCollectedQuestions(Long userId, int page, int pageSize) {
         Page<UserCollection> collectionPage = new Page<>(page, pageSize);
-        LambdaQueryWrapper<UserCollection> wrapper = new LambdaQueryWrapper<>();
+        com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<UserCollection> wrapper
+                = new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<>();
         wrapper.eq(UserCollection::getUserId, userId);
         wrapper.orderByDesc(UserCollection::getCreateTime);
         IPage<UserCollection> collectionResult = userCollectionMapper.selectPage(collectionPage, wrapper);
 
-        List<QuestionDTO> list = new ArrayList<>();
+        List<QuestionDTO> dtoList = new ArrayList<>();
         for (UserCollection uc : collectionResult.getRecords()) {
             ExamQuestion question = examQuestionMapper.selectById(uc.getQuestionId());
             if (question != null) {
-                list.add(convertToDTO(question));
+                dtoList.add(convertToDTO(question));
             }
         }
 
-        return new PageResult<>(list, collectionResult.getTotal(), page, pageSize,
-                (long) page * pageSize < collectionResult.getTotal());
+        Page<QuestionDTO> dtoPage = new Page<>(page, pageSize, collectionResult.getTotal());
+        dtoPage.setRecords(dtoList);
+        return PageResult.of(dtoPage);
     }
 
     @Override
@@ -135,10 +113,8 @@ public class QuestionServiceImpl implements QuestionService {
         LocalDate today = LocalDate.now();
         long seed = today.toEpochDay();
 
-        LambdaQueryWrapper<ExamQuestion> wrapper = new LambdaQueryWrapper<>();
-        if (categoryId != null) {
-            wrapper.eq(ExamQuestion::getCategoryId, categoryId);
-        }
+        com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<ExamQuestion> wrapper
+                = new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<>();
         wrapper.eq(ExamQuestion::getStatus, 1);
 
         long total = examQuestionMapper.selectCount(wrapper);
@@ -172,37 +148,18 @@ public class QuestionServiceImpl implements QuestionService {
 
     @Override
     public PageResult<QuestionDTO> searchQuestions(String keyword, Long categoryId, int page, int pageSize) {
-        LambdaQueryWrapper<ExamQuestion> wrapper = new LambdaQueryWrapper<>();
-        if (categoryId != null) {
-            wrapper.eq(ExamQuestion::getCategoryId, categoryId);
-        }
-        wrapper.eq(ExamQuestion::getStatus, 1);
-
-        if (StrUtil.isNotBlank(keyword)) {
-            wrapper.and(w -> w
-                    .like(ExamQuestion::getStem, keyword)
-                    .or()
-                    .like(ExamQuestion::getOptionA, keyword)
-                    .or()
-                    .like(ExamQuestion::getOptionB, keyword)
-                    .or()
-                    .like(ExamQuestion::getOptionC, keyword)
-                    .or()
-                    .like(ExamQuestion::getOptionD, keyword)
-            );
-        }
-        wrapper.orderByDesc(ExamQuestion::getId);
-
         Page<ExamQuestion> mpPage = new Page<>(page, pageSize);
-        IPage<ExamQuestion> result = examQuestionMapper.selectPage(mpPage, wrapper);
+        IPage<ExamQuestion> result = examQuestionMapper.selectPageWithFilters(
+                mpPage, null, null, 1, keyword);
 
-        List<QuestionDTO> list = new ArrayList<>();
+        List<QuestionDTO> dtoList = new ArrayList<>();
         for (ExamQuestion q : result.getRecords()) {
-            list.add(convertToDTO(q));
+            dtoList.add(convertToDTO(q));
         }
 
-        return new PageResult<>(list, result.getTotal(), (int)result.getCurrent(), (int)result.getSize(),
-                (long) (int)result.getCurrent() * (int)result.getSize() < result.getTotal());
+        Page<QuestionDTO> dtoPage = new Page<>(page, pageSize, result.getTotal());
+        dtoPage.setRecords(dtoList);
+        return PageResult.of(dtoPage);
     }
 
     @Override
@@ -232,19 +189,12 @@ public class QuestionServiceImpl implements QuestionService {
     private QuestionDTO convertToDTO(ExamQuestion q) {
         QuestionDTO dto = new QuestionDTO();
         dto.setId(q.getId());
-        dto.setCategoryId(q.getCategoryId());
         dto.setSubjectId(q.getSubjectId());
-        dto.setChapterId(q.getChapterId());
-        dto.setTagId(q.getTagId());
         dto.setType(q.getType());
         dto.setStem(q.getStem());
-        dto.setOptionA(q.getOptionA());
-        dto.setOptionB(q.getOptionB());
-        dto.setOptionC(q.getOptionC());
-        dto.setOptionD(q.getOptionD());
+        dto.setOptionList(q.getOptionList());
         dto.setAnswer(q.getAnswer());
         dto.setExplanation(q.getExplanation());
-        dto.setDifficulty(q.getDifficulty());
         dto.setStatus(q.getStatus());
         return dto;
     }

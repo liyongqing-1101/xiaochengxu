@@ -5,50 +5,27 @@
 
     <resultMap id="ExamQuestionResultMap" type="com.wxjiaozi.entity.ExamQuestion">
         <id column="id" property="id"/>
-        <result column="category_id" property="categoryId"/>
         <result column="subject_id" property="subjectId"/>
-        <result column="chapter_id" property="chapterId"/>
-        <result column="tag_id" property="tagId"/>
         <result column="type" property="type"/>
         <result column="stem" property="stem"/>
-        <result column="option_a" property="optionA"/>
-        <result column="option_b" property="optionB"/>
-        <result column="option_c" property="optionC"/>
-        <result column="option_d" property="optionD"/>
+        <result column="option_list" property="optionList" typeHandler="com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler"/>
         <result column="answer" property="answer"/>
         <result column="explanation" property="explanation"/>
-        <result column="difficulty" property="difficulty"/>
         <result column="status" property="status"/>
-        <result column="stem_images" property="stemImages"/>
-        <result column="created_at" property="createdAt"/>
-        <result column="updated_at" property="updatedAt"/>
+        <result column="created_at" property="createTime"/>
+        <result column="updated_at" property="updateTime"/>
     </resultMap>
 
     <select id="selectPageWithFilters" resultMap="ExamQuestionResultMap">
         SELECT
-            id, category_id, subject_id, chapter_id, tag_id,
-            type, stem, option_a, option_b, option_c, option_d,
-            answer, explanation, difficulty, status, stem_images,
-            created_at, updated_at
+            id, subject_id, type, stem, option_list, answer, explanation, status, created_at, updated_at
         FROM exam_question
         <where>
-            <if test="categoryId != null">
-                AND category_id = #{categoryId}
-            </if>
             <if test="subjectId != null">
                 AND subject_id = #{subjectId}
             </if>
-            <if test="chapterId != null">
-                AND chapter_id = #{chapterId}
-            </if>
-            <if test="tagId != null">
-                AND tag_id = #{tagId}
-            </if>
             <if test="type != null">
                 AND type = #{type}
-            </if>
-            <if test="difficulty != null">
-                AND difficulty = #{difficulty}
             </if>
             <if test="status != null">
                 AND status = #{status}
@@ -60,33 +37,7 @@
         ORDER BY id DESC
     </select>
 
-    <insert id="insertBatch" parameterType="list">
-        INSERT INTO exam_question (
-            category_id, subject_id, chapter_id, tag_id,
-            type, stem, option_a, option_b, option_c, option_d,
-            answer, explanation, difficulty, status, stem_images
-        ) VALUES
-        <foreach collection="list" item="item" separator=",">
-            (
-                #{item.categoryId},
-                #{item.subjectId},
-                #{item.chapterId},
-                #{item.tagId},
-                #{item.type},
-                #{item.stem},
-                #{item.optionA},
-                #{item.optionB},
-                #{item.optionC},
-                #{item.optionD},
-                #{item.answer},
-                #{item.explanation},
-                #{item.difficulty},
-                #{item.status},
-                #{item.stemImages}
-            )
-        </foreach>
-    </insert>
-
+    <!-- 按科目和题型统计题量（过滤禁用状态） -->
     <select id="countBySubjectAndType" resultType="java.util.HashMap">
         SELECT
             type,
@@ -95,6 +46,18 @@
         WHERE subject_id = #{subjectId}
           AND status = 1
         GROUP BY type
+    </select>
+
+    <!-- 随机抽题：按科目+题型随机抽取指定数量的题目（过滤禁用状态） -->
+    <select id="selectRandomBySubjectAndType" resultMap="ExamQuestionResultMap">
+        SELECT
+            id, subject_id, type, stem, option_list, answer, explanation, status, created_at, updated_at
+        FROM exam_question
+        WHERE subject_id = #{subjectId}
+          AND type = #{type}
+          AND status = 1
+        ORDER BY RAND()
+        LIMIT #{limit}
     </select>
 
 </mapper>

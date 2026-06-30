@@ -7,8 +7,7 @@ import com.wxjiaozi.dto.mini.QuestionDTO;
 
 public interface QuestionService {
 
-    PageResult<QuestionDTO> getQuestionList(Long categoryId, Long subjectId, Long chapterId, Long tagId,
-                                            Integer type, Integer difficulty, String keyword, int page, int pageSize);
+    PageResult<QuestionDTO> getQuestionList(Long subjectId, Integer type, Integer status, String keyword, int page, int pageSize);
 
     PageResult<QuestionDTO> getCollectedQuestions(Long userId, int page, int pageSize);
 

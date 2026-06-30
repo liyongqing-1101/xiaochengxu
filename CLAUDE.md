@@ -105,3 +105,87 @@ Import executor defined in `ThreadPoolConfig.java`: core=4, max=8, queue=200, `C
 - `RedisKeyUtil` — constants for all Redis key patterns (SESSION_PREFIX, IMPORT_PROGRESS_PREFIX, CATEGORY_CACHE_KEY)
 - `ExcelImportUtil` — streaming POI reader with `ImportParseResult` (parsed rows + errors)
 - `ExcelExportUtil` — template generation with data validation dropdowns + instruction sheet + error export
+
+## ECS Deployment
+
+### Server Information
+- **Public IP**: `47.97.193.230`
+- **SSH User**: `root`
+- **SSH Password**: Stored in memory (not hardcoded)
+- **OS**: Ubuntu 22.04
+
+### Services Running
+| Service | Port | Notes |
+|---------|------|-------|
+| MySQL 8.0 | 3306 | Database: `mini_wx_db`, running in Docker |
+| Redis 7 | 6379 | Password-protected, running in Docker |
+| Backend API | 8080 | SpringBoot JAR at `/root/xiaochengxu/backend/target/exam-backend-1.0.0.jar` |
+
+### Deployment Workflow
+1. **Build backend locally**:
+   ```bash
+   cd backend
+   mvn clean package -DskipTests
+   ```
+2. **Upload JAR via SCP/SFTP** to `/root/xiaochengxu/backend/target/`
+3. **Restart backend**:
+   ```bash
+   # Kill old process
+   fuser -k 8080/tcp
+   # Start new process
+   cd /root/xiaochengxu/backend/target
+   nohup java -jar exam-backend-1.0.0.jar > /root/xiaochengxu/backend/app.log 2>&1 &
+   ```
+4. **Build mini-program frontend**:
+   ```bash
+   cd user-frontend
+   pnpm build:mp-weixin
+   ```
+5. Import `dist/build/mp-weixin` into WeChat DevTools
+
+### Docker Compose Location
+- Path: `/root/docker-compose.yml`
+- MySQL container name: `mysql8`
+- Redis container name: `redis7`
+
+## Recent Feature Implementations
+
+### Random Exam Popup (Bottom Sheet)
+- **File**: `user-frontend/src/components/exam/RandomExamPopup.vue`
+- **Trigger**: Click "随机刷题" on home page
+- **Behavior**:
+  - Slides up from bottom as sheet with semi-transparent mask
+  - Close on mask click or X button
+  - 4 subjects to choose (mutually exclusive radio selection)
+  - Start button disabled initially until subject selected
+  - Gray button (disabled) → black button (enabled) on selection
+  - No "all subjects" option (must pick one)
+- **Type**: Native Vue component with CSS transform animation (not Vant Popup)
+
+### Random Exam Session Logic
+- **API Flow**: `POST /question/session/start` with subject filter
+- **Exam Structure**: Single choice 40 × 1pt + Multiple choice 20 × 2pt + True/False 20 × 1pt = 100 pts
+- **Timer**: 30 minutes countdown enforced by frontend
+- **Backend stats endpoint**: `GET /question/subject/{subjectId}/stats` returns question counts per type
+
+## Important Gotchas
+
+### UniApp Mini-Program Specific
+- **Dynamic imports may fail**: `const { fn } = await import(...)` destructuring can return `undefined` in WeChat mini-program environment. Use static imports for stores, API modules, and request utilities.
+- **Pinia store availability**: `useUserStore()` at top-level in `App.vue` may return `undefined`. Access store inside functions/lifecycle hooks instead.
+- **TabBar redirect loops**: On `pages/index/index.vue` and other tab pages, call `restoreSession()` BEFORE checking `isLoggedIn` in `onShow`. Token is in storage but Pinia state resets on page reload.
+- **Popup z-index**: Fixed-position popups need `z-index: 999` to appear above everything.
+
+### API Interceptor Pattern
+- **Response format**: `{ code: 0, message: "ok", data: T }` is **locked**. Code 0 = success.
+- **Interceptor MUST unwrap**: The mini-program response interceptor extracts `res.data` when `code === 0`. If not unwrapped, `result.token` will be undefined.
+
+### Frontend Build
+- Always use `pnpm build:mp-weixin` for production builds.
+- The `dist/build/mp-weixin` folder is what gets imported into WeChat DevTools.
+- If TypeScript errors block build, use `pnpm type-check` to see them first.
+
+### Backend
+- Excel import uses streaming POI reader (`ExcelImportUtil`) — never loads entire workbook into memory.
+- Import task status is tracked in Redis via `ImportTask`.
+- Question answer comparison uses normalized sort (order-agnostic).

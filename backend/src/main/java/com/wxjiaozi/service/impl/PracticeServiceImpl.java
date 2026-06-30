@@ -1,7 +1,6 @@
 package com.wxjiaozi.service.impl;
 
 import cn.hutool.core.util.StrUtil;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -17,6 +16,7 @@ import com.wxjiaozi.entity.ExamQuestion;
 import com.wxjiaozi.entity.ExamSubject;
 import com.wxjiaozi.entity.UserAnswerRecord;
 import com.wxjiaozi.entity.UserWrongQuestion;
+import com.wxjiaozi.enums.SubjectEnum;
 import com.wxjiaozi.mapper.ExamQuestionMapper;
 import com.wxjiaozi.mapper.ExamSubjectMapper;
 import com.wxjiaozi.mapper.UserAnswerRecordMapper;
@@ -64,6 +64,11 @@ public class PracticeServiceImpl implements PracticeService {
     @Override
     @Transactional
     public QuestionSessionDTO startSession(Long userId, StartSessionDTO params) {
+        // 校验科目编码合法性
+        if (!SubjectEnum.isValidCode(params.getSubjectId().intValue())) {
+            throw new BusinessException("非法的科目编码");
+        }
+
         List<ExamQuestion> selectedQuestions;
 
         // 随机试卷模式：按题型分别抽取指定数量
@@ -71,30 +76,18 @@ public class PracticeServiceImpl implements PracticeService {
                 && params.getMultiCount() != null && params.getTrueFalseCount() != null) {
             selectedQuestions = selectRandomExamQuestions(params);
         } else {
-            LambdaQueryWrapper<ExamQuestion> wrapper = new LambdaQueryWrapper<>();
-            wrapper.eq(ExamQuestion::getCategoryId, params.getCategoryId());
-            wrapper.eq(ExamQuestion::getSubjectId, params.getSubjectId());
-            wrapper.eq(ExamQuestion::getStatus, 1);
-
-            if (params.getChapterId() != null) {
-                wrapper.eq(ExamQuestion::getChapterId, params.getChapterId());
-            }
-            if (params.getKnowledgePointId() != null) {
-                wrapper.eq(ExamQuestion::getTagId, params.getKnowledgePointId());
-            }
-
-            List<ExamQuestion> allQuestions = examQuestionMapper.selectList(wrapper);
+            // 普通练习模式：按科目随机抽取
+            List<ExamQuestion> allQuestions = examQuestionMapper.selectRandomBySubjectAndType(
+                    params.getSubjectId(),
+                    null,
+                    params.getQuestionCount() != null && params.getQuestionCount() > 0
+                            ? params.getQuestionCount()
+                            : 50  // 默认50题
+            );
             if (allQuestions.isEmpty()) {
-                throw new BusinessException("该条件下没有可用题目");
+                throw new BusinessException("该科目下没有可用题目");
             }
-
-            Collections.shuffle(allQuestions);
-
-            int questionCount = params.getQuestionCount() != null && params.getQuestionCount() > 0
-                    ? Math.min(params.getQuestionCount(), allQuestions.size())
-                    : allQuestions.size();
-
-            selectedQuestions = allQuestions.subList(0, questionCount);
+            selectedQuestions = allQuestions;
         }
 
         String sessionId = UUID.randomUUID().toString().replace("-", "");
@@ -108,7 +101,6 @@ public class PracticeServiceImpl implements PracticeService {
 
         QuestionSessionDTO session = new QuestionSessionDTO();
         session.setSessionId(sessionId);
-        session.setCategoryId(params.getCategoryId());
         session.setSubjectId(params.getSubjectId());
         session.setCurrentIndex(0);
         session.setQuestions(questionDTOs);
@@ -138,29 +130,44 @@ public class PracticeServiceImpl implements PracticeService {
 
         // 单选题
         if (params.getSingleCount() != null && params.getSingleCount() > 0) {
-            List<ExamQuestion> singles = queryQuestionsByType(
-                    params.getCategoryId(), params.getSubjectId(), 1);
-            Collections.shuffle(singles);
-            int count = Math.min(params.getSingleCount(), singles.size());
-            if (count > 0) result.addAll(singles.subList(0, count));
+            List<ExamQuestion> singles = examQuestionMapper.selectRandomBySubjectAndType(
+                    params.getSubjectId(), 1, params.getSingleCount());
+            if (singles.isEmpty()) {
+                throw new BusinessException("该科目下单选题数量不足");
+            }
+            if (singles.size() < params.getSingleCount()) {
+                throw new BusinessException("该科目下单选题数量不足，需要 "
+                        + params.getSingleCount() + " 题，实际只有 " + singles.size() + " 题");
+            }
+            result.addAll(singles);
         }
 
         // 多选题
         if (params.getMultiCount() != null && params.getMultiCount() > 0) {
-            List<ExamQuestion> multis = queryQuestionsByType(
-                    params.getCategoryId(), params.getSubjectId(), 2);
-            Collections.shuffle(multis);
-            int count = Math.min(params.getMultiCount(), multis.size());
-            if (count > 0) result.addAll(multis.subList(0, count));
+            List<ExamQuestion> multis = examQuestionMapper.selectRandomBySubjectAndType(
+                    params.getSubjectId(), 2, params.getMultiCount());
+            if (multis.isEmpty()) {
+                throw new BusinessException("该科目下多选题数量不足");
+            }
+            if (multis.size() < params.getMultiCount()) {
+                throw new BusinessException("该科目下多选题数量不足，需要 "
+                        + params.getMultiCount() + " 题，实际只有 " + multis.size() + " 题");
+            }
+            result.addAll(multis);
         }
 
         // 判断题
         if (params.getTrueFalseCount() != null && params.getTrueFalseCount() > 0) {
-            List<ExamQuestion> tfs = queryQuestionsByType(
-                    params.getCategoryId(), params.getSubjectId(), 3);
-            Collections.shuffle(tfs);
-            int count = Math.min(params.getTrueFalseCount(), tfs.size());
-            if (count > 0) result.addAll(tfs.subList(0, count));
+            List<ExamQuestion> tfs = examQuestionMapper.selectRandomBySubjectAndType(
+                    params.getSubjectId(), 3, params.getTrueFalseCount());
+            if (tfs.isEmpty()) {
+                throw new BusinessException("该科目下判断题数量不足");
+            }
+            if (tfs.size() < params.getTrueFalseCount()) {
+                throw new BusinessException("该科目下判断题数量不足，需要 "
+                        + params.getTrueFalseCount() + " 题，实际只有 " + tfs.size() + " 题");
+            }
+            result.addAll(tfs);
         }
 
         if (result.isEmpty()) {
@@ -168,15 +175,6 @@ public class PracticeServiceImpl implements PracticeService {
         }
 
         return result;
-    }
-
-    private List<ExamQuestion> queryQuestionsByType(Long categoryId, Long subjectId, Integer type) {
-        LambdaQueryWrapper<ExamQuestion> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(ExamQuestion::getCategoryId, categoryId);
-        wrapper.eq(ExamQuestion::getSubjectId, subjectId);
-        wrapper.eq(ExamQuestion::getType, type);
-        wrapper.eq(ExamQuestion::getStatus, 1);
-        return examQuestionMapper.selectList(wrapper);
     }
 
     @Override
@@ -208,7 +206,6 @@ public class PracticeServiceImpl implements PracticeService {
         UserAnswerRecord record = new UserAnswerRecord();
         record.setUserId(userId);
         record.setQuestionId(params.getQuestionId());
-        record.setCategoryId(question.getCategoryId());
         record.setSubjectId(question.getSubjectId());
         record.setSessionId(params.getSessionId());
         record.setSelectedOptions(String.join(",", selectedOptions));
@@ -268,7 +265,8 @@ public class PracticeServiceImpl implements PracticeService {
             throw new BusinessException("会话数据异常");
         }
 
-        LambdaQueryWrapper<UserAnswerRecord> wrapper = new LambdaQueryWrapper<>();
+        com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<UserAnswerRecord> wrapper
+                = new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<>();
         wrapper.eq(UserAnswerRecord::getSessionId, params.getSessionId());
         wrapper.eq(UserAnswerRecord::getUserId, userId);
         List<UserAnswerRecord> records = userAnswerRecordMapper.selectList(wrapper);
@@ -308,19 +306,12 @@ public class PracticeServiceImpl implements PracticeService {
     private QuestionDTO convertToDTO(ExamQuestion q) {
         QuestionDTO dto = new QuestionDTO();
         dto.setId(q.getId());
-        dto.setCategoryId(q.getCategoryId());
         dto.setSubjectId(q.getSubjectId());
-        dto.setChapterId(q.getChapterId());
-        dto.setTagId(q.getTagId());
         dto.setType(q.getType());
         dto.setStem(q.getStem());
-        dto.setOptionA(q.getOptionA());
-        dto.setOptionB(q.getOptionB());
-        dto.setOptionC(q.getOptionC());
-        dto.setOptionD(q.getOptionD());
+        dto.setOptionList(q.getOptionList());
         dto.setAnswer(q.getAnswer());
         dto.setExplanation(q.getExplanation());
-        dto.setDifficulty(q.getDifficulty());
         dto.setStatus(q.getStatus());
         return dto;
     }
@@ -330,13 +321,15 @@ public class PracticeServiceImpl implements PracticeService {
             return Collections.emptyList();
         }
         String trimmed = answer.trim();
-        if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
-            try {
-                return objectMapper.readValue(trimmed, new TypeReference<List<String>>() {});
-            } catch (JsonProcessingException e) {
-                log.warn("解析JSON答案失败: {}", answer);
-            }
+        // 判断题特殊处理：true/false
+        if ("true".equalsIgnoreCase(trimmed) || "false".equalsIgnoreCase(trimmed)) {
+            return Collections.singletonList(trimmed.toLowerCase());
         }
+        // 多选：多个字母用逗号分隔
+        if (trimmed.contains(",")) {
+            return cn.hutool.core.util.StrUtil.split(trimmed, ',', true, true);
+        }
+        // 单选：单个字母
         return Collections.singletonList(trimmed.toUpperCase());
     }
 

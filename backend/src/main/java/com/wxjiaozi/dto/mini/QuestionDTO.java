@@ -1,23 +1,23 @@
 package com.wxjiaozi.dto.mini;
 
+import com.wxjiaozi.dto.QuestionOptionDTO;
 import lombok.Data;
+
+import java.util.List;
 
 @Data
 public class QuestionDTO {
 
     private Long id;
-    private Long categoryId;
     private Long subjectId;
-    private Long chapterId;
-    private Long tagId;
     private Integer type;
     private String stem;
-    private String optionA;
-    private String optionB;
-    private String optionC;
-    private String optionD;
+    /**
+     * 选项列表：[{"key":"A","value":"选项内容"},...]
+     * 判断题此字段为 null
+     */
+    private List<QuestionOptionDTO> optionList;
     private String answer;
     private String explanation;
-    private Integer difficulty;
     private Integer status;
 }

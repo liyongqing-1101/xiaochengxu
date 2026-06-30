@@ -113,19 +113,12 @@ public class WrongBookServiceImpl implements WrongBookService {
     private QuestionDTO convertToDTO(ExamQuestion q) {
         QuestionDTO dto = new QuestionDTO();
         dto.setId(q.getId());
-        dto.setCategoryId(q.getCategoryId());
         dto.setSubjectId(q.getSubjectId());
-        dto.setChapterId(q.getChapterId());
-        dto.setTagId(q.getTagId());
         dto.setType(q.getType());
         dto.setStem(q.getStem());
-        dto.setOptionA(q.getOptionA());
-        dto.setOptionB(q.getOptionB());
-        dto.setOptionC(q.getOptionC());
-        dto.setOptionD(q.getOptionD());
+        dto.setOptionList(q.getOptionList());
         dto.setAnswer(q.getAnswer());
         dto.setExplanation(q.getExplanation());
-        dto.setDifficulty(q.getDifficulty());
         dto.setStatus(q.getStatus());
         return dto;
     }

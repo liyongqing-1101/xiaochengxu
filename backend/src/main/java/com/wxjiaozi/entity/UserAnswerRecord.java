@@ -14,7 +14,6 @@ public class UserAnswerRecord extends BaseEntity {
 
     private Long userId;
     private Long questionId;
-    private Long categoryId;
     private Long subjectId;
     private String sessionId;
     private String selectedOptions;

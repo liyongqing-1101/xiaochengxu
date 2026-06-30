@@ -106,7 +106,11 @@ public class ImportServiceImpl implements ImportService {
                         List<ExamQuestion> newQuestions = filterDuplicates(batch);
                         int duplicateCount = batch.size() - newQuestions.size();
                         if (!newQuestions.isEmpty()) {
-                            examQuestionMapper.insertBatch(newQuestions);
+                            // 使用 MyBatis-Plus 的 saveBatch 方式替代 insertBatch
+                            // 逐条插入
+                            for (ExamQuestion q : newQuestions) {
+                                examQuestionMapper.insert(q);
+                            }
                         }
                         int batchSuccess = newQuestions.size();
                         currentBatchSuccess[0] += batchSuccess;

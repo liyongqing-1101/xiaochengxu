@@ -66,17 +66,13 @@ public class QuestionController {
     @Operation(summary = "题目列表(分页+筛选)")
     public Result<PageResult<QuestionDTO>> listQuestions(
             @CurrentUser(required = false) Long userId,
-            @RequestParam(required = false) Long categoryId,
             @RequestParam(required = false) Long subjectId,
-            @RequestParam(required = false) Long chapterId,
-            @RequestParam(required = false) Long tagId,
             @RequestParam(required = false) Integer type,
-            @RequestParam(required = false) Integer difficulty,
             @RequestParam(required = false) String keyword,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "20") int pageSize) {
         PageResult<QuestionDTO> result = questionService.getQuestionList(
-                categoryId, subjectId, chapterId, tagId, type, difficulty, keyword, page, pageSize);
+                subjectId, type, 1, keyword, page, pageSize);
         return Result.ok(result);
     }
 

@@ -14,21 +14,29 @@ public interface ExamQuestionMapper extends BaseMapper<ExamQuestion> {
 
     Page<ExamQuestion> selectPageWithFilters(
             Page<ExamQuestion> page,
-            @Param("categoryId") Long categoryId,
             @Param("subjectId") Long subjectId,
-            @Param("chapterId") Long chapterId,
-            @Param("tagId") Long tagId,
             @Param("type") Integer type,
-            @Param("difficulty") Integer difficulty,
             @Param("status") Integer status,
             @Param("keyword") String keyword
     );
 
-    int insertBatch(@Param("list") List<ExamQuestion> list);
-
     /**
-     * 按科目和题型统计题目数量
+     * 按科目和题型统计题量（过滤禁用状态 status=0）
+     * @param subjectId 科目ID
      * @return [{type: 1, count: 150}, {type: 2, count: 80}, ...]
      */
     List<Map<String, Object>> countBySubjectAndType(@Param("subjectId") Long subjectId);
+
+    /**
+     * 随机抽题：按科目+题型随机抽取指定数量的题目（过滤禁用状态 status=0）
+     * @param subjectId 科目ID
+     * @param type 题型，null 表示不限题型
+     * @param limit 抽取数量
+     * @return 随机题目列表
+     */
+    List<ExamQuestion> selectRandomBySubjectAndType(
+            @Param("subjectId") Long subjectId,
+            @Param("type") Integer type,
+            @Param("limit") Integer limit
+    );
 }

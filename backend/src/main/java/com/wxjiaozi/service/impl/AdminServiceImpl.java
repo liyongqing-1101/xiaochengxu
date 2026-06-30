@@ -92,8 +92,9 @@ public class AdminServiceImpl implements AdminService {
                                                     Integer type, Integer difficulty, Integer status, String keyword,
                                                     int page, int pageSize) {
         Page<ExamQuestion> mpPage = new Page<>(page, pageSize);
+        // 简化：只保留 subjectId, type, status, keyword
         Page<ExamQuestion> result = examQuestionMapper.selectPageWithFilters(
-                mpPage, categoryId, subjectId, chapterId, tagId, type, difficulty, status, keyword
+                mpPage, subjectId, type, status, keyword
         );
         return PageResult.of(result);
     }
@@ -111,46 +112,40 @@ public class AdminServiceImpl implements AdminService {
             question = new ExamQuestion();
         }
 
-        question.setCategoryId(dto.getCategoryId());
         question.setSubjectId(dto.getSubjectId());
-        question.setChapterId(dto.getChapterId());
-        question.setTagId(dto.getTagId());
         question.setType(dto.getType());
         question.setStem(dto.getStem());
-        question.setOptionA(dto.getOptionA());
-        question.setOptionB(dto.getOptionB());
-        question.setOptionC(dto.getOptionC());
-        question.setOptionD(dto.getOptionD());
-        question.setDifficulty(dto.getDifficulty());
         question.setStatus(dto.getStatus() != null ? dto.getStatus() : 1);
 
+        // 答案存储：单选存字母，多选存逗号分隔，判断存true/false
         String answer = dto.getAnswer();
         if (StrUtil.isNotBlank(answer)) {
             String trimmed = answer.trim();
-            if (!trimmed.startsWith("[")) {
-                try {
-                    List<String> parsed = objectMapper.readValue(trimmed, List.class);
-                    answer = objectMapper.writeValueAsString(parsed);
-                } catch (JsonProcessingException e) {
-                    if (trimmed.contains(",")) {
-                        String[] parts = trimmed.split(",");
-                        List<String> partsList = new ArrayList<>();
-                        for (String part : parts) {
-                            partsList.add(part.trim().toUpperCase());
-                        }
-                        try {
-                            answer = objectMapper.writeValueAsString(partsList);
-                        } catch (JsonProcessingException ex) {
-                            answer = trimmed.toUpperCase();
-                        }
-                    } else {
-                        answer = trimmed.toUpperCase();
+            // 判断题特殊处理
+            if ("true".equalsIgnoreCase(trimmed) || "false".equalsIgnoreCase(trimmed)) {
+                answer = trimmed.toLowerCase();
+            } else if (trimmed.contains(",")) {
+                // 多选：多个字母逗号分隔，统一转大写
+                String[] parts = trimmed.split(",");
+                List<String> partsList = new ArrayList<>();
+                for (String part : parts) {
+                    String trimmedPart = part.trim().toUpperCase();
+                    if (!trimmedPart.isEmpty()) {
+                        partsList.add(trimmedPart);
                     }
                 }
+                answer = String.join(",", partsList);
+            } else {
+                // 单选：单个字母
+                answer = trimmed.toUpperCase();
             }
         }
         question.setAnswer(answer);
         question.setExplanation(dto.getExplanation());
+        // optionList 使用新的JSON格式（由DTO处理，此处简化）
+        if (dto.getOptionList() != null && !dto.getOptionList().isEmpty()) {
+            question.setOptionList(dto.getOptionList());
+        }
 
         if (dto.getId() != null) {
             examQuestionMapper.updateById(question);

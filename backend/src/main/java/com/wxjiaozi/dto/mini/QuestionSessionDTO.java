@@ -8,7 +8,6 @@ import java.util.List;
 public class QuestionSessionDTO {
 
     private String sessionId;
-    private Long categoryId;
     private Long subjectId;
     private Integer currentIndex;
     private List<QuestionDTO> questions;

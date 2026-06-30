@@ -236,7 +236,7 @@ public class UserServiceImpl implements UserService {
         LambdaQueryWrapper<UserAnswerRecord> answerWrapper = new LambdaQueryWrapper<>();
         answerWrapper.eq(UserAnswerRecord::getUserId, userId);
         if (categoryId != null) {
-            answerWrapper.eq(UserAnswerRecord::getCategoryId, categoryId);
+            // 移除 categoryId 过滤，只按 userId 过滤
         }
 
         List<UserAnswerRecord> records = userAnswerRecordMapper.selectList(answerWrapper);
