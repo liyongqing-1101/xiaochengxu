@@ -16,6 +16,7 @@ import { CategoryId } from '@/types/enums'
 import { storage } from '@/utils/storage'
 import { StorageKey, CACHE, APP } from '@/utils/constants'
 import { getCategoryMeta } from '@/config/category.config'
+import { get } from '@/utils/request'
 
 export const useExamStore = defineStore('exam', () => {
   // ═══════════════════════════════════════
@@ -62,7 +63,7 @@ export const useExamStore = defineStore('exam', () => {
 
     loading.value = true
     try {
-      const { get } = await import('@/utils/request')
+      // get imported statically at top
       const data = await get<ExamCategory[]>('/exam/categories')
       categories.value = data
 
@@ -97,7 +98,7 @@ export const useExamStore = defineStore('exam', () => {
     if (cat?.subjects?.length) return cat.subjects
 
     try {
-      const { get } = await import('@/utils/request')
+      // get imported statically at top
       return await get<Subject[]>('/exam/subjects', { categoryId: cid })
     } catch {
       return []
@@ -109,7 +110,7 @@ export const useExamStore = defineStore('exam', () => {
    */
   async function fetchChapters(subjectId: number): Promise<Chapter[]> {
     try {
-      const { get } = await import('@/utils/request')
+      // get imported statically at top
       return await get<Chapter[]>('/exam/chapters', {
         categoryId: currentCategoryId.value,
         subjectId,
@@ -127,7 +128,7 @@ export const useExamStore = defineStore('exam', () => {
     chapterId: number,
   ): Promise<KnowledgePoint[]> {
     try {
-      const { get } = await import('@/utils/request')
+      // get imported statically at top
       return await get<KnowledgePoint[]>('/exam/knowledge-points', {
         categoryId: currentCategoryId.value,
         subjectId,

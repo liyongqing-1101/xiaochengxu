@@ -8,11 +8,7 @@
       :class="{ 'custom-tabbar__item--active': tab.path === currentPath }"
       @tap="handleTabClick(tab)"
     >
-      <image
-        class="custom-tabbar__icon"
-        :src="tab.path === currentPath ? tab.activeIcon : tab.icon"
-        mode="aspectFit"
-      />
+      <text class="custom-tabbar__icon">{{ tab.path === currentPath ? tab.activeIcon : tab.icon }}</text>
       <text class="custom-tabbar__text">{{ tab.text }}</text>
 
       <!-- 错题数角标 -->
@@ -51,32 +47,32 @@ const tabs = computed<TabItem[]>(() => [
   {
     path: '/pages/index/index',
     text: '首页',
-    icon: '/static/images/icons/tab-home.png',
-    activeIcon: '/static/images/icons/tab-home-active.png',
+    icon: '🏠',
+    activeIcon: '🏠',
   },
   {
     path: '/pages/study/index',
     text: '学习',
-    icon: '/static/images/icons/tab-study.png',
-    activeIcon: '/static/images/icons/tab-study-active.png',
+    icon: '📖',
+    activeIcon: '📖',
   },
   {
     path: '/pages/teaching-aid/index',
     text: '教辅',
-    icon: '/static/images/icons/tab-teach.png',
-    activeIcon: '/static/images/icons/tab-teach-active.png',
+    icon: '📚',
+    activeIcon: '📚',
   },
   {
     path: '/pages/community/index',
     text: '社区',
-    icon: '/static/images/icons/tab-community.png',
-    activeIcon: '/static/images/icons/tab-community-active.png',
+    icon: '💬',
+    activeIcon: '💬',
   },
   {
     path: '/pages/profile/index',
     text: '我的',
-    icon: '/static/images/icons/tab-profile.png',
-    activeIcon: '/static/images/icons/tab-profile-active.png',
+    icon: '👤',
+    activeIcon: '👤',
     badge: props.wrongCount,
   },
 ])
@@ -112,8 +108,8 @@ function handleTabClick(tab: TabItem): void {
   }
 
   &__icon {
-    width: 44rpx;
-    height: 44rpx;
+    font-size: 44rpx;
+    line-height: 1;
     margin-bottom: 4rpx;
   }
 

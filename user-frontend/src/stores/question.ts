@@ -19,6 +19,7 @@ import type {
 import { AnswerStatus } from '@/types/enums'
 import { storage } from '@/utils/storage'
 import { StorageKey } from '@/utils/constants'
+import { post, del } from '@/utils/request'
 
 export const useQuestionStore = defineStore('question', () => {
   // ═══════════════════════════════════════
@@ -110,7 +111,7 @@ export const useQuestionStore = defineStore('question', () => {
    */
   async function startSession(params: StartSessionParams): Promise<void> {
     try {
-      const { post } = await import('@/utils/request')
+      // post imported statically at top
       const data = await post<QuestionSession>('/question/session/start', params as any)
       session.value = data
       showExplanation.value = false
@@ -176,7 +177,7 @@ export const useQuestionStore = defineStore('question', () => {
 
     submitting.value = true
     try {
-      const { post } = await import('@/utils/request')
+      // post imported statically at top
       const result = await post<SubmitResult>('/question/submit', {
         sessionId: session.value.sessionId,
         questionId: currentQuestion.value.id,
@@ -241,7 +242,7 @@ export const useQuestionStore = defineStore('question', () => {
   async function toggleCollect(): Promise<void> {
     if (!currentQuestion.value) return
     try {
-      const { post, del } = await import('@/utils/request')
+      // post/del imported statically at top
       if (currentQuestion.value.collected) {
         await del('/question/collect', { questionId: currentQuestion.value.id })
         currentQuestion.value.collected = false
@@ -262,7 +263,7 @@ export const useQuestionStore = defineStore('question', () => {
   async function endSession(): Promise<void> {
     if (!session.value) return
     try {
-      const { post } = await import('@/utils/request')
+      // post imported statically at top
       await post('/question/session/end', { sessionId: session.value.sessionId })
     } catch {
       // 静默失败
