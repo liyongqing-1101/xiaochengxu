@@ -8,6 +8,7 @@ import com.wxjiaozi.common.BusinessException;
 import com.wxjiaozi.common.PageResult;
 import com.wxjiaozi.dto.mini.DailyQuestionDTO;
 import com.wxjiaozi.dto.mini.QuestionDTO;
+import com.wxjiaozi.dto.mini.SubjectStatsDTO;
 import com.wxjiaozi.entity.ExamQuestion;
 import com.wxjiaozi.entity.UserAnswerRecord;
 import com.wxjiaozi.entity.UserCollection;
@@ -22,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 
 @Slf4j
@@ -201,6 +203,30 @@ public class QuestionServiceImpl implements QuestionService {
 
         return new PageResult<>(list, result.getTotal(), (int)result.getCurrent(), (int)result.getSize(),
                 (long) (int)result.getCurrent() * (int)result.getSize() < result.getTotal());
+    }
+
+    @Override
+    public SubjectStatsDTO getSubjectStats(Long subjectId) {
+        List<Map<String, Object>> rows = examQuestionMapper.countBySubjectAndType(subjectId);
+
+        SubjectStatsDTO stats = new SubjectStatsDTO();
+        int total = 0;
+        for (Map<String, Object> row : rows) {
+            Integer type = (Integer) row.get("type");
+            Object countObj = row.get("count");
+            int count = countObj instanceof Long ? ((Long) countObj).intValue() : (Integer) countObj;
+
+            total += count;
+            if (type == 1) {
+                stats.setSingleCount(count);
+            } else if (type == 2) {
+                stats.setMultiCount(count);
+            } else if (type == 3) {
+                stats.setTrueFalseCount(count);
+            }
+        }
+        stats.setTotalCount(total);
+        return stats;
     }
 
     private QuestionDTO convertToDTO(ExamQuestion q) {

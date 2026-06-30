@@ -128,6 +128,17 @@
     <!-- 安全区域底部 -->
     <view class="home-safe-bottom" />
 
+    <!-- ========== 随机刷题弹窗 ========== -->
+    <RandomExamPopup
+      :visible="showRandomPopup"
+      :subjects="displaySubjects"
+      :selected-id="randomSelectedSubjectId"
+      :stats="randomSubjectStats"
+      @close="handleRandomPopupClose"
+      @select="handleRandomSubjectSelect"
+      @start="handleRandomStart"
+    />
+
     <!-- ========== 6. 底部 TabBar ========== -->
     <CustomTabbar
       current-path="/pages/index/index"
@@ -145,10 +156,11 @@ import { useExamStore } from '@/stores/exam'
 import { useWrongBookStore } from '@/stores/wrongBook'
 import { useCheckIn } from '@/composables/useCheckIn'
 import type { Subject } from '@/types/exam'
-import type { DailyQuestion } from '@/types/question'
+import type { DailyQuestion, SubjectStats } from '@/types/question'
 import DailyQuestionCard from '@components/question/DailyQuestionCard.vue'
 import ProgressBar from '@components/question/ProgressBar.vue'
 import CustomTabbar from '@components/tabbar/CustomTabbar.vue'
+import RandomExamPopup from '@components/exam/RandomExamPopup.vue'
 
 const userStore = useUserStore()
 const examStore = useExamStore()
@@ -160,6 +172,13 @@ const statusBarHeight: number = systemInfo.statusBarHeight || 20
 
 const countdownDays = ref<number>(0)
 const dailyQuestion = ref<DailyQuestion | null>(null)
+
+// ═══════════════════════════════════════
+// 随机刷题弹窗状态
+// ═══════════════════════════════════════
+const showRandomPopup = ref(false)
+const randomSelectedSubjectId = ref<number | null>(null)
+const randomSubjectStats = ref<SubjectStats | null>(null)
 
 // ═══════════════════════════════════════
 // 4 个固定科目
@@ -267,14 +286,13 @@ function handleToolClick(type: string): void {
       uni.navigateTo({ url: '/subpackages/wrong-book/pages/index' })
       break
     case 'random':
-      // 直接随机刷题，不弹弹窗
+      // 弹出随机刷题弹窗，必须选择科目
       if (displaySubjects.value.length === 0) {
         uni.showToast({ title: '暂无可用科目', icon: 'none' })
         return
       }
-      uni.navigateTo({
-        url: `/subpackages/answer/pages/index?subjectId=${displaySubjects.value[0].id}&mode=random`,
-      })
+      randomSelectedSubjectId.value = null
+      showRandomPopup.value = true
       break
     case 'daily':
       handleDailyQuestion()
@@ -287,6 +305,61 @@ function handleToolClick(type: string): void {
 
 function handleTabChange(path: string): void {
   uni.switchTab({ url: path })
+}
+
+/** 随机刷题弹窗 — 科目选择（单选互斥）+ 加载题量统计 */
+async function handleRandomSubjectSelect(id: number): Promise<void> {
+  randomSelectedSubjectId.value = id
+  randomSubjectStats.value = null // 先清空，加载中
+
+  try {
+    const { questionApi } = await import('@/api/modules/question')
+    randomSubjectStats.value = await questionApi.getSubjectStats(id)
+  } catch {
+    randomSubjectStats.value = null
+  }
+}
+
+/** 随机刷题弹窗 — 关闭 */
+function handleRandomPopupClose(): void {
+  showRandomPopup.value = false
+  randomSubjectStats.value = null
+}
+
+/** 随机刷题弹窗 — 开始刷题（含题量校验） */
+async function handleRandomStart(): Promise<void> {
+  if (!randomSelectedSubjectId.value) return
+
+  uni.showLoading({ title: '校验中...', mask: true })
+
+  try {
+    const { questionApi } = await import('@/api/modules/question')
+    const stats = await questionApi.getSubjectStats(randomSelectedSubjectId.value)
+
+    uni.hideLoading()
+
+    // 校验各题型最低题量
+    if (stats.singleCount < 40) {
+      uni.showToast({ title: `单选题不足（需≥40，当前${stats.singleCount}）`, icon: 'none', duration: 2500 })
+      return
+    }
+    if (stats.multiCount < 20) {
+      uni.showToast({ title: `多选题不足（需≥20，当前${stats.multiCount}）`, icon: 'none', duration: 2500 })
+      return
+    }
+    if (stats.trueFalseCount < 20) {
+      uni.showToast({ title: `判断题不足（需≥20，当前${stats.trueFalseCount}）`, icon: 'none', duration: 2500 })
+      return
+    }
+
+    showRandomPopup.value = false
+    uni.navigateTo({
+      url: `/subpackages/answer/pages/index?subjectId=${randomSelectedSubjectId.value}&mode=random`,
+    })
+  } catch {
+    uni.hideLoading()
+    uni.showToast({ title: '校验失败，请重试', icon: 'none' })
+  }
 }
 
 onMounted(() => {

@@ -87,4 +87,14 @@
         </foreach>
     </insert>
 
+    <select id="countBySubjectAndType" resultType="java.util.HashMap">
+        SELECT
+            type,
+            COUNT(*) AS count
+        FROM exam_question
+        WHERE subject_id = #{subjectId}
+          AND status = 1
+        GROUP BY type
+    </select>
+
 </mapper>

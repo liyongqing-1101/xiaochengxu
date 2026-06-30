@@ -8,6 +8,7 @@ import com.wxjiaozi.dto.mini.QuestionDTO;
 import com.wxjiaozi.dto.mini.QuestionSessionDTO;
 import com.wxjiaozi.dto.mini.SessionSummaryDTO;
 import com.wxjiaozi.dto.mini.StartSessionDTO;
+import com.wxjiaozi.dto.mini.SubjectStatsDTO;
 import com.wxjiaozi.dto.mini.SubmitAnswerDTO;
 import com.wxjiaozi.dto.mini.SubmitResultDTO;
 import com.wxjiaozi.security.CurrentUser;
@@ -19,6 +20,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -121,5 +123,12 @@ public class QuestionController {
             @RequestParam(defaultValue = "20") int pageSize) {
         PageResult<QuestionDTO> result = questionService.searchQuestions(keyword, categoryId, page, pageSize);
         return Result.ok(result);
+    }
+
+    @GetMapping("/subject/{subjectId}/stats")
+    @Operation(summary = "获取科目题目统计（按题型）")
+    public Result<SubjectStatsDTO> getSubjectStats(@PathVariable Long subjectId) {
+        SubjectStatsDTO stats = questionService.getSubjectStats(subjectId);
+        return Result.ok(stats);
     }
 }

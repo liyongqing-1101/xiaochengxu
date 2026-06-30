@@ -7,6 +7,7 @@ import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
 import java.util.List;
+import java.util.Map;
 
 @Mapper
 public interface ExamQuestionMapper extends BaseMapper<ExamQuestion> {
@@ -24,4 +25,10 @@ public interface ExamQuestionMapper extends BaseMapper<ExamQuestion> {
     );
 
     int insertBatch(@Param("list") List<ExamQuestion> list);
+
+    /**
+     * 按科目和题型统计题目数量
+     * @return [{type: 1, count: 150}, {type: 2, count: 80}, ...]
+     */
+    List<Map<String, Object>> countBySubjectAndType(@Param("subjectId") Long subjectId);
 }

@@ -85,6 +85,14 @@ export interface StartSessionParams {
   questionCount?: number
   /** 刷题模式: practice-练习, random-随机, exam-模拟考 */
   mode?: 'practice' | 'random' | 'exam'
+  /** 随机模式 — 单选题数量 */
+  singleCount?: number
+  /** 随机模式 — 多选题数量 */
+  multiCount?: number
+  /** 随机模式 — 判断题数量 */
+  trueFalseCount?: number
+  /** 顺序模式 — 起始题号 */
+  startFrom?: number
 }
 
 /** 提交答案参数 */
@@ -128,6 +136,18 @@ export interface WrongQuestion {
   lastWrongAnswer: string[]
   /** 错误来源 */
   source: import('./enums').WrongSource
+}
+
+/** 科目题目统计（按题型） */
+export interface SubjectStats {
+  /** 单选题数量 */
+  singleCount: number
+  /** 多选题数量 */
+  multiCount: number
+  /** 判断题数量 */
+  trueFalseCount: number
+  /** 总题量 */
+  totalCount: number
 }
 
 /** 每日一题 */

@@ -2,7 +2,7 @@
  * 题目 API 模块
  */
 import { get, post, del } from '@/utils/request'
-import type { Question, QuestionSession, StartSessionParams, SubmitResult, SessionSummary, SubmitAnswerParams, DailyQuestion } from '@/types/question'
+import type { Question, QuestionSession, StartSessionParams, SubmitResult, SessionSummary, SubmitAnswerParams, DailyQuestion, SubjectStats } from '@/types/question'
 import type { PaginatedResult, PaginatedParams } from '@/types/api'
 
 export const questionApi = {
@@ -82,5 +82,13 @@ export const questionApi = {
       keyword,
       ...params,
     } as any)
+  },
+
+  /**
+   * 获取科目题目统计（按题型）
+   * GET /question/subject/{subjectId}/stats
+   */
+  getSubjectStats(subjectId: number): Promise<SubjectStats> {
+    return get<SubjectStats>(`/question/subject/${subjectId}/stats`)
   },
 }

@@ -1,6 +1,7 @@
 package com.wxjiaozi.service;
 
 import com.wxjiaozi.common.PageResult;
+import com.wxjiaozi.dto.mini.SubjectStatsDTO;
 import com.wxjiaozi.dto.mini.DailyQuestionDTO;
 import com.wxjiaozi.dto.mini.QuestionDTO;
 
@@ -18,4 +19,9 @@ public interface QuestionService {
     DailyQuestionDTO getDailyQuestion(Long categoryId);
 
     PageResult<QuestionDTO> searchQuestions(String keyword, Long categoryId, int page, int pageSize);
+
+    /**
+     * 获取科目题目统计（按题型）
+     */
+    SubjectStatsDTO getSubjectStats(Long subjectId);
 }
