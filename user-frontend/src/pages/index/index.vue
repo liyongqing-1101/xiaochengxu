@@ -133,7 +133,6 @@
       :visible="showRandomPopup"
       :subjects="displaySubjects"
       :selected-id="randomSelectedSubjectId"
-      :stats="randomSubjectStats"
       @close="handleRandomPopupClose"
       @select="handleRandomSubjectSelect"
       @start="handleRandomStart"
@@ -156,7 +155,7 @@ import { useExamStore } from '@/stores/exam'
 import { useWrongBookStore } from '@/stores/wrongBook'
 import { useCheckIn } from '@/composables/useCheckIn'
 import type { Subject } from '@/types/exam'
-import type { DailyQuestion, SubjectStats } from '@/types/question'
+import type { DailyQuestion } from '@/types/question'
 import DailyQuestionCard from '@components/question/DailyQuestionCard.vue'
 import ProgressBar from '@components/question/ProgressBar.vue'
 import CustomTabbar from '@components/tabbar/CustomTabbar.vue'
@@ -178,7 +177,6 @@ const dailyQuestion = ref<DailyQuestion | null>(null)
 // ═══════════════════════════════════════
 const showRandomPopup = ref(false)
 const randomSelectedSubjectId = ref<number | null>(null)
-const randomSubjectStats = ref<SubjectStats | null>(null)
 
 // ═══════════════════════════════════════
 // 4 个固定科目
@@ -307,58 +305,30 @@ function handleTabChange(path: string): void {
   uni.switchTab({ url: path })
 }
 
-/** 随机刷题弹窗 — 科目选择（单选互斥）+ 加载题量统计 */
-async function handleRandomSubjectSelect(id: number): Promise<void> {
+/** 随机刷题弹窗 — 科目选择（单选互斥） */
+function handleRandomSubjectSelect(id: number | null): void {
   randomSelectedSubjectId.value = id
-  randomSubjectStats.value = null // 先清空，加载中
-
-  try {
-    const { questionApi } = await import('@/api/modules/question')
-    randomSubjectStats.value = await questionApi.getSubjectStats(id)
-  } catch {
-    randomSubjectStats.value = null
-  }
 }
 
 /** 随机刷题弹窗 — 关闭 */
 function handleRandomPopupClose(): void {
   showRandomPopup.value = false
-  randomSubjectStats.value = null
 }
 
-/** 随机刷题弹窗 — 开始刷题（含题量校验） */
-async function handleRandomStart(): Promise<void> {
-  if (!randomSelectedSubjectId.value) return
+/** 随机刷题弹窗 — 开始刷题 */
+function handleRandomStart(subjectId: number | null): void {
+  showRandomPopup.value = false
 
-  uni.showLoading({ title: '校验中...', mask: true })
-
-  try {
-    const { questionApi } = await import('@/api/modules/question')
-    const stats = await questionApi.getSubjectStats(randomSelectedSubjectId.value)
-
-    uni.hideLoading()
-
-    // 校验各题型最低题量
-    if (stats.singleCount < 40) {
-      uni.showToast({ title: `单选题不足（需≥40，当前${stats.singleCount}）`, icon: 'none', duration: 2500 })
-      return
-    }
-    if (stats.multiCount < 20) {
-      uni.showToast({ title: `多选题不足（需≥20，当前${stats.multiCount}）`, icon: 'none', duration: 2500 })
-      return
-    }
-    if (stats.trueFalseCount < 20) {
-      uni.showToast({ title: `判断题不足（需≥20，当前${stats.trueFalseCount}）`, icon: 'none', duration: 2500 })
-      return
-    }
-
-    showRandomPopup.value = false
+  if (subjectId) {
+    // 选中科目：跳转该科目刷题
     uni.navigateTo({
-      url: `/subpackages/answer/pages/index?subjectId=${randomSelectedSubjectId.value}&mode=random`,
+      url: `/subpackages/answer/pages/index?subjectId=${subjectId}&mode=random`,
     })
-  } catch {
-    uni.hideLoading()
-    uni.showToast({ title: '校验失败，请重试', icon: 'none' })
+  } else {
+    // 未选中科目：跳转全科目随机刷题
+    uni.navigateTo({
+      url: '/subpackages/answer/pages/index?mode=random',
+    })
   }
 }
 
