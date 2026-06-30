@@ -317,19 +317,13 @@ function handleRandomPopupClose(): void {
 
 /** 随机刷题弹窗 — 开始刷题 */
 function handleRandomStart(subjectId: number | null): void {
-  showRandomPopup.value = false
+  // 未选中科目不响应（弹窗按钮已置灰不可点）
+  if (!subjectId) return
 
-  if (subjectId) {
-    // 选中科目：跳转该科目刷题
-    uni.navigateTo({
-      url: `/subpackages/answer/pages/index?subjectId=${subjectId}&mode=random`,
-    })
-  } else {
-    // 未选中科目：跳转全科目随机刷题
-    uni.navigateTo({
-      url: '/subpackages/answer/pages/index?mode=random',
-    })
-  }
+  showRandomPopup.value = false
+  uni.navigateTo({
+    url: `/subpackages/answer/pages/index?subjectId=${subjectId}&mode=random`,
+  })
 }
 
 onMounted(() => {

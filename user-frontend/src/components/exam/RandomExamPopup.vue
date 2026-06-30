@@ -31,11 +31,12 @@
         </view>
       </view>
 
-      <!-- 提示文字 -->
-      <text class="popup__hint">不选则刷全部科目</text>
-
-      <!-- 开始按钮 -->
-      <view class="popup__btn" @tap.stop="handleStart">
+      <!-- 开始按钮（未选中时置灰不可点击） -->
+      <view
+        class="popup__btn"
+        :class="{ 'popup__btn--disabled': !selectedId }"
+        @tap.stop="handleStart"
+      >
         <text class="popup__btn-text">开始刷题</text>
       </view>
 
@@ -70,12 +71,13 @@ function handleClose(): void {
 }
 
 function handleSelect(id: number): void {
-  // 单选逻辑：点击已选中则取消
-  const newId = props.selectedId === id ? null : id
-  emit('select', newId)
+  // 强制单选互斥，只能选中，不能取消
+  emit('select', id)
 }
 
 function handleStart(): void {
+  // 未选中科目时不响应
+  if (!props.selectedId) return
   emit('start', props.selectedId)
 }
 </script>
@@ -191,6 +193,14 @@ function handleStart(): void {
     font-size: 32rpx;
     font-weight: 600;
     color: #fff;
+  }
+
+  &--disabled {
+    background: #C9CDD4;
+
+    .popup__btn-text {
+      color: #86909C;
+    }
   }
 }
 
