@@ -14,6 +14,7 @@ import type { UserInfo, UserStats, LoginResult } from '@/types/user'
 import { storage } from '@/utils/storage'
 import { StorageKey } from '@/utils/constants'
 import { authApi } from '@/api/modules/auth'
+import { userApi } from '@/api/modules/user'
 import { get, post, put } from '@/utils/request'
 
 export const useUserStore = defineStore('user', () => {
@@ -186,14 +187,26 @@ export const useUserStore = defineStore('user', () => {
   /**
    * 登出
    */
-  function logout(): void {
-    token.value = null
-    userInfo.value = null
-    stats.value = null
+  async function logout(): Promise<void> {
+    console.log('[Store] 开始退出登录流程')
+    try {
+      // 调用后端logout接口，将token加入黑名单
+      await userApi.logout()
+      console.log('[Store] 后端登出接口调用成功')
+    } catch (err) {
+      console.warn('[Store] 后端登出接口调用失败，本地强制清除:', err)
+    } finally {
+      // 无论接口调用成功与否，都清除本地登录状态
+      token.value = null
+      userInfo.value = null
+      stats.value = null
 
-    // 清除本地存储中的认证信息
-    storage.remove(StorageKey.TOKEN)
-    storage.remove(StorageKey.USER_INFO)
+      // 清除本地存储中的认证信息
+      storage.remove(StorageKey.TOKEN)
+      storage.remove(StorageKey.USER_INFO)
+      storage.remove(StorageKey.REFRESH_TOKEN)
+      console.log('[Store] 本地登录态已清除')
+    }
   }
 
   /**

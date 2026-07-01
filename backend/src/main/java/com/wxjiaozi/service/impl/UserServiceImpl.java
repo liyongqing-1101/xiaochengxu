@@ -6,6 +6,9 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.wxjiaozi.common.BusinessException;
 import com.wxjiaozi.common.PageResult;
+import org.springframework.data.redis.core.StringRedisTemplate;
+
+import java.util.concurrent.TimeUnit;
 import com.wxjiaozi.dto.mini.CheckInResultDTO;
 import com.wxjiaozi.dto.mini.LoginResultDTO;
 import com.wxjiaozi.dto.mini.LoginResultDTO.UserInfoDTO;
@@ -45,6 +48,12 @@ public class UserServiceImpl implements UserService {
     private final JwtUtil jwtUtil;
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
+    private final StringRedisTemplate stringRedisTemplate;
+
+    /**
+     * Redis Token黑名单前缀
+     */
+    private static final String TOKEN_BLACKLIST_PREFIX = "token:blacklist:";
 
     public UserServiceImpl(UserMapper userMapper,
                            UserAnswerRecordMapper userAnswerRecordMapper,
@@ -52,7 +61,8 @@ public class UserServiceImpl implements UserService {
                            UserFeedbackMapper userFeedbackMapper,
                            JwtUtil jwtUtil,
                            RestTemplate restTemplate,
-                           ObjectMapper objectMapper) {
+                           ObjectMapper objectMapper,
+                           StringRedisTemplate stringRedisTemplate) {
         this.userMapper = userMapper;
         this.userAnswerRecordMapper = userAnswerRecordMapper;
         this.userCheckInMapper = userCheckInMapper;
@@ -60,6 +70,7 @@ public class UserServiceImpl implements UserService {
         this.jwtUtil = jwtUtil;
         this.restTemplate = restTemplate;
         this.objectMapper = objectMapper;
+        this.stringRedisTemplate = stringRedisTemplate;
     }
 
     @Override
@@ -342,5 +353,26 @@ public class UserServiceImpl implements UserService {
         feedback.setContact(contact);
         feedback.setStatus(0);
         userFeedbackMapper.insert(feedback);
+    }
+
+    @Override
+    public void logout(String token) {
+        try {
+            // 解析Token获取过期时间
+            Long userId = jwtUtil.getUserIdFromToken(token);
+            log.info("用户退出登录: userId={}", userId);
+
+            // 将Token加入黑名单，设置过期时间与Token本身一致（7天）
+            String blacklistKey = TOKEN_BLACKLIST_PREFIX + token;
+            // 7天 = 7 * 24 * 60 * 60 秒
+            stringRedisTemplate.opsForValue().set(blacklistKey, "1", 7, TimeUnit.DAYS);
+
+            log.info("Token已加入黑名单: userId={}", userId);
+        } catch (Exception e) {
+            log.warn("Token解析失败，直接加入黑名单: {}", e.getMessage());
+            // 即使解析失败也加入黑名单，防止无效Token被滥用
+            String blacklistKey = TOKEN_BLACKLIST_PREFIX + token;
+            stringRedisTemplate.opsForValue().set(blacklistKey, "1", 7, TimeUnit.DAYS);
+        }
     }
 }

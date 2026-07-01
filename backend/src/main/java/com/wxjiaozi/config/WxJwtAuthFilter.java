@@ -7,10 +7,12 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 
 import java.io.PrintWriter;
+import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Component
@@ -18,6 +20,14 @@ public class WxJwtAuthFilter implements HandlerInterceptor {
 
     @Autowired
     private JwtUtil jwtUtil;
+
+    @Autowired
+    private StringRedisTemplate stringRedisTemplate;
+
+    /**
+     * Redis Token黑名单前缀
+     */
+    private static final String TOKEN_BLACKLIST_PREFIX = "token:blacklist:";
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -47,6 +57,16 @@ public class WxJwtAuthFilter implements HandlerInterceptor {
         }
 
         String token = authHeader.substring(7);
+
+        // 检查Token是否在黑名单中
+        String blacklistKey = TOKEN_BLACKLIST_PREFIX + token;
+        Boolean isBlacklisted = stringRedisTemplate.hasKey(blacklistKey);
+        if (Boolean.TRUE.equals(isBlacklisted)) {
+            log.warn("Token已被加入黑名单: userId={}", jwtUtil.getUserIdFromToken(token));
+            writeUnauthorized(response, "token已失效，请重新登录");
+            return false;
+        }
+
         if (!jwtUtil.validateToken(token)) {
             writeUnauthorized(response, "token无效或已过期");
             return false;

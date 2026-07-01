@@ -27,4 +27,9 @@ public interface UserService {
     PageResult<PracticeHistoryDTO> getHistory(Long userId, int page, int pageSize);
 
     void submitFeedback(Long userId, String content, String contact);
+
+    /**
+     * 用户退出登录，将token加入Redis黑名单
+     */
+    void logout(String token);
 }

@@ -81,13 +81,23 @@ function doRequest<T>(config: RequestConfig, retryLeft: number): Promise<T> {
     loadingText = '加载中...',
   } = config
 
+  const fullUrl = buildUrl(url, params)
+
+  // 打印请求日志
+  console.log(`[HTTP] ${method} ${fullUrl}`, {
+    请求参数: params,
+    请求体: data,
+    请求头: header,
+    剩余重试次数: retryLeft
+  })
+
   if (shouldLoad) {
     showLoading(loadingText)
   }
 
   return new Promise<T>((resolve, reject) => {
     uni.request({
-      url: buildUrl(url, params),
+      url: fullUrl,
       method,
       data,
       header: {
@@ -98,15 +108,23 @@ function doRequest<T>(config: RequestConfig, retryLeft: number): Promise<T> {
       success: (res) => {
         if (shouldLoad) hideLoading()
 
+        // 打印响应日志
+        console.log(`[HTTP] ✅ ${method} ${fullUrl} 响应成功`, {
+          状态码: res.statusCode,
+          响应数据: res.data
+        })
+
         // HTTP 状态码检查
         if (res.statusCode === 401) {
           // Token 过期由拦截器处理, 这里静默失败
+          console.warn(`[HTTP] ❌ ${method} ${fullUrl} 401未授权`)
           reject(new Error('LOGIN_EXPIRED'))
           return
         }
 
         if (res.statusCode && res.statusCode >= 500) {
           // 服务端错误可重试
+          console.warn(`[HTTP] ❌ ${method} ${fullUrl} 服务器错误 status=${res.statusCode}`)
           if (retryLeft > 0) {
             setTimeout(() => {
               doRequest<T>(config, retryLeft - 1).then(resolve).catch(reject)
@@ -123,8 +141,12 @@ function doRequest<T>(config: RequestConfig, retryLeft: number): Promise<T> {
       fail: (err) => {
         if (shouldLoad) hideLoading()
 
+        // 打印错误日志
+        console.error(`[HTTP] ❌ ${method} ${fullUrl} 请求失败`, err)
+
         // 网络错误重试
         if (retryLeft > 0) {
+          console.warn(`[HTTP] 🔄 ${method} ${fullUrl} 准备重试，剩余次数: ${retryLeft - 1}`)
           setTimeout(() => {
             doRequest<T>(config, retryLeft - 1).then(resolve).catch(reject)
           }, API.RETRY_DELAY)

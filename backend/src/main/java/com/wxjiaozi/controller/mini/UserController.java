@@ -9,6 +9,7 @@ import com.wxjiaozi.dto.mini.UserStatsDTO;
 import com.wxjiaozi.security.CurrentUser;
 import com.wxjiaozi.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
+import jakarta.servlet.http.HttpServletRequest;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -78,6 +79,29 @@ public class UserController {
         String content = body.get("content");
         String contact = body.get("contact");
         userService.submitFeedback(userId, content, contact);
+        return Result.ok();
+    }
+
+    @PostMapping("/logout")
+    @Operation(summary = "用户退出登录")
+    public Result<Void> logout(HttpServletRequest request) {
+        String authHeader = request.getHeader("Authorization");
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            String token = authHeader.substring(7);
+            userService.logout(token);
+        }
+        return Result.ok();
+    }
+
+    @PutMapping("/updateNickname")
+    @Operation(summary = "更新用户昵称")
+    public Result<Void> updateNickname(@CurrentUser Long userId,
+                                        @RequestBody Map<String, String> body) {
+        String nickname = body.get("nickname");
+        if (nickname == null || nickname.trim().isEmpty()) {
+            return Result.fail(400, "昵称不能为空");
+        }
+        userService.updateUserInfo(userId, nickname.trim(), null);
         return Result.ok();
     }
 }

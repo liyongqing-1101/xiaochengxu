@@ -53,4 +53,22 @@ export const userApi = {
   submitFeedback(content: string, contact?: string): Promise<void> {
     return post<void>('/user/feedback', { content, contact })
   },
+
+  /**
+   * 用户退出登录
+   * POST /user/logout
+   */
+  logout(): Promise<void> {
+    console.log('[User API] 调用退出登录接口')
+    return post<void>('/user/logout')
+  },
+
+  /**
+   * 更新用户昵称
+   * PUT /user/updateNickname
+   */
+  updateNickname(nickname: string): Promise<void> {
+    console.log('[User API] 调用更新昵称接口:', { nickname })
+    return put<void>('/user/updateNickname', { nickname })
+  },
 }
