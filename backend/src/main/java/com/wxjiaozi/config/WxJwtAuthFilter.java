@@ -45,6 +45,7 @@ public class WxJwtAuthFilter implements HandlerInterceptor {
                 || requestURI.contains("/wx/auth/register")
                 || requestURI.contains("/wx/exam/categories")
                 || requestURI.contains("/wx/exam/subjects")
+                || requestURI.contains("/wx/subject/list")
                 || requestURI.matches(".*/wx/question/subject/\\d+/stats.*")
                 || requestURI.contains("/wx/question/daily")) {
             log.debug("Whitelisted path, passing through: {}", requestURI);

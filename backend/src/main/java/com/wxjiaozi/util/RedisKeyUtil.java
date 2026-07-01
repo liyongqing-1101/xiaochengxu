@@ -23,6 +23,27 @@ public class RedisKeyUtil {
     /** 导入进度过期时间(秒): 24小时 */
     public static final long IMPORT_PROGRESS_TTL = 86400;
 
+    // ============================================================
+    // 用户做题记录缓存
+    // ============================================================
+
+    /** 用户科目已做题数缓存前缀 */
+    public static final String USER_SUBJECT_DONE_PREFIX = "user:subject:done:";
+
+    /** 用户科目已做题数缓存过期时间(秒): 24小时 */
+    public static final long USER_SUBJECT_DONE_TTL = 86400;
+
+    /**
+     * 生成用户科目已做题数缓存Key
+     *
+     * @param userId    用户ID
+     * @param subjectId 科目ID
+     * @return Redis Key: user:subject:done:{userId}:{subjectId}
+     */
+    public static String userSubjectDoneKey(Long userId, Long subjectId) {
+        return USER_SUBJECT_DONE_PREFIX + userId + ":" + subjectId;
+    }
+
     /**
      * 生成答题会话Redis Key
      */

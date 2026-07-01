@@ -120,6 +120,21 @@ CREATE TABLE IF NOT EXISTS user_answer_record (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='答题记录';
 
 -- ============================================================
+-- 7b. 用户做题明细表（去重版）
+-- 同一用户同一题目仅保留一条记录，重复刷题不新增行
+-- ============================================================
+CREATE TABLE IF NOT EXISTS exam_record (
+    id          BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '主键',
+    user_id     BIGINT NOT NULL COMMENT '小程序用户ID',
+    subject_id  BIGINT NOT NULL COMMENT '科目ID',
+    question_id BIGINT NOT NULL COMMENT '作答题目ID',
+    is_correct  TINYINT NOT NULL DEFAULT 0 COMMENT '0错误 1正确',
+    create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '答题时间',
+    UNIQUE KEY uk_user_question (user_id, question_id),
+    INDEX idx_user_subject (user_id, subject_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户做题明细表（去重）';
+
+-- ============================================================
 -- 8. 错题本
 -- ============================================================
 CREATE TABLE IF NOT EXISTS user_wrong_question (
@@ -213,10 +228,12 @@ CREATE TABLE IF NOT EXISTS import_task (
 INSERT INTO exam_category (id, name, icon, description, sort_order, status) VALUES
 (1, '高校教资', 'certificate', '高校教师资格证考试题库', 1, 1);
 
--- 初始化示例科目
+-- 初始化示例科目（与前端FIXED_SUBJECTS一致）
 INSERT INTO exam_subject (id, category_id, name, icon, sort_order, status) VALUES
-(1, 1, '综合素质', 'book', 1, 1),
-(2, 1, '教育知识与能力', 'edit', 2, 1);
+(1, 1, '高等教育学', '📖', 1, 1),
+(2, 1, '高等教育法规和政策', '⚖️', 2, 1),
+(3, 1, '教师伦理学', '🎓', 3, 1),
+(4, 1, '大学心理学', '🧠', 4, 1);
 
 -- 初始化管理员 (密码: admin123, BCrypt加密)
 INSERT INTO admin_user (id, username, password, nickname, role, status) VALUES

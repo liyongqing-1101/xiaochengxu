@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.wxjiaozi.mapper.ExamRecordMapper">
+
+    <resultMap id="BaseResultMap" type="com.wxjiaozi.entity.ExamRecord">
+        <id column="id" property="id"/>
+        <result column="user_id" property="userId"/>
+        <result column="subject_id" property="subjectId"/>
+        <result column="question_id" property="questionId"/>
+        <result column="is_correct" property="isCorrect"/>
+        <result column="create_time" property="createTime"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, user_id, subject_id, question_id, is_correct, create_time
+    </sql>
+
+    <!-- ============================================================ -->
+    <!-- 插入做题记录（忽略重复，依赖uk_user_question唯一索引） -->
+    <!-- ============================================================ -->
+    <insert id="insertIgnore" parameterType="com.wxjiaozi.entity.ExamRecord"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT IGNORE INTO exam_record (user_id, subject_id, question_id, is_correct, create_time)
+        VALUES (#{userId}, #{subjectId}, #{questionId}, #{isCorrect}, NOW())
+    </insert>
+
+    <!-- ============================================================ -->
+    <!-- 插入或更新做题记录 -->
+    <!-- 题目已做过则更新is_correct，未做过则插入 -->
+    <!-- ============================================================ -->
+    <insert id="insertOrUpdate" parameterType="com.wxjiaozi.entity.ExamRecord"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO exam_record (user_id, subject_id, question_id, is_correct, create_time)
+        VALUES (#{userId}, #{subjectId}, #{questionId}, #{isCorrect}, NOW())
+        ON DUPLICATE KEY UPDATE
+            is_correct = VALUES(is_correct),
+            create_time = NOW()
+    </insert>
+
+    <!-- ============================================================ -->
+    <!-- 根据用户ID和题目ID查询记录 -->
+    <!-- ============================================================ -->
+    <select id="selectByUserIdAndQuestionId" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM exam_record
+        WHERE user_id = #{userId} AND question_id = #{questionId}
+    </select>
+
+    <!-- ============================================================ -->
+    <!-- 统计用户某科目下已做题总数（去重） -->
+    <!-- ============================================================ -->
+    <select id="countByUserIdAndSubjectId" resultType="java.lang.Long">
+        SELECT COUNT(*)
+        FROM exam_record
+        WHERE user_id = #{userId}
+          AND subject_id = #{subjectId}
+    </select>
+
+    <!-- ============================================================ -->
+    <!-- 删除做题记录 -->
+    <!-- ============================================================ -->
+    <delete id="deleteById">
+        DELETE FROM exam_record WHERE id = #{id}
+    </delete>
+
+    <delete id="deleteByUserIdAndQuestionId">
+        DELETE FROM exam_record
+        WHERE user_id = #{userId} AND question_id = #{questionId}
+    </delete>
+
+</mapper>

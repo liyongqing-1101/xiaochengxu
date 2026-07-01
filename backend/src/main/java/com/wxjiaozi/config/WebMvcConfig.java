@@ -50,6 +50,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
                         "/wx/auth/register",      // 小程序注册排除拦截
                         "/wx/exam/categories",    // 分类列表（首页未登录可访问）
                         "/wx/exam/subjects",      // 科目列表（首页未登录可访问）
+                        "/wx/subject/list",       // 首页科目列表（含已做题进度，未登录可访问）
                         "/wx/question/subject/*/stats",  // 科目统计（首页未登录可访问）
                         "/wx/question/daily"      // 每日一题（未登录可访问）
                 );

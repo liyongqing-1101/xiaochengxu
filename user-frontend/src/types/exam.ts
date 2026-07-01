@@ -20,13 +20,15 @@ export interface Subject {
   id: number
   /** 所属考试大类 */
   categoryId: CategoryId
-  /** 科目名称, 如 "综合素质", "教育知识与能力" */
+  /** 科目名称, 如 "高等教育学", "大学心理学" */
   name: string
   /** 图标 */
   icon: string
   /** 总题量 */
   totalQuestions: number
-  /** 已完成题量(用户) */
+  /** 用户已做题数（去重） */
+  doneCount?: number
+  /** 已完成题量(用户) @deprecated 使用 doneCount */
   completedQuestions?: number
   /** 章节列表 */
   chapters?: Chapter[]

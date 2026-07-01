@@ -9,6 +9,14 @@ import type { ExamCategory, Subject, Chapter, KnowledgePoint } from '@/types/exa
 
 export const examApi = {
   /**
+   * 获取首页科目列表（含用户已做题数/科目总题数）
+   * GET /subject/list?categoryId=1
+   */
+  getSubjectList(categoryId: number): Promise<Subject[]> {
+    return get<Subject[]>('/subject/list', { categoryId })
+  },
+
+  /**
    * 获取所有考试分类及科目
    * GET /exam/categories
    */

@@ -80,11 +80,11 @@
           <view class="home-subject-item__info">
             <text class="home-subject-item__name">{{ subject.name }}</text>
             <text class="home-subject-item__progress">
-              {{ subject.completedQuestions || 0 }} / {{ subject.totalQuestions }}
+              {{ subject.doneCount || subject.completedQuestions || 0 }} / {{ subject.totalQuestions }}
             </text>
           </view>
           <ProgressBar
-            :current="subject.completedQuestions || 0"
+            :current="subject.doneCount || subject.completedQuestions || 0"
             :total="subject.totalQuestions"
             :show-info="false"
             :height="6"
@@ -154,6 +154,7 @@ import { useUserStore } from '@/stores/user'
 import { useExamStore } from '@/stores/exam'
 import { useWrongBookStore } from '@/stores/wrongBook'
 import { useCheckIn } from '@/composables/useCheckIn'
+import { examApi } from '@/api/modules/exam'
 import type { Subject } from '@/types/exam'
 import type { DailyQuestion } from '@/types/question'
 import DailyQuestionCard from '@components/question/DailyQuestionCard.vue'
@@ -179,6 +180,11 @@ const showRandomPopup = ref(false)
 const randomSelectedSubjectId = ref<number | null>(null)
 
 // ═══════════════════════════════════════
+// 首页科目列表（从 /wx/subject/list 接口获取，含doneCount）
+// ═══════════════════════════════════════
+const subjectList = ref<Subject[]>([])
+
+// ═══════════════════════════════════════
 // 4 个固定科目
 // ═══════════════════════════════════════
 const FIXED_SUBJECTS = [
@@ -190,14 +196,15 @@ const FIXED_SUBJECTS = [
 
 const displaySubjects = computed<Subject[]>(() => {
   return FIXED_SUBJECTS.map(fixed => {
-    const serverSubject = examStore.subjects.find(s => s.name === fixed.name)
+    const serverSubject = subjectList.value.find(s => s.name === fixed.name)
     return {
       id: serverSubject?.id || fixed.id,
       categoryId: examStore.currentCategoryId,
       name: fixed.name,
       icon: fixed.icon,
       totalQuestions: serverSubject?.totalQuestions || 0,
-      completedQuestions: (serverSubject as any)?.completedQuestions || 0,
+      doneCount: serverSubject?.doneCount || 0,
+      completedQuestions: serverSubject?.doneCount || 0,
       sortOrder: 0,
       status: 1,
     } as Subject
@@ -228,11 +235,25 @@ async function loadPageData(): Promise<void> {
     await Promise.all([
       examStore.fetchCategories(),
       userStore.fetchStats(),
+      loadSubjectList(),
     ])
     loadDailyQuestion()
     calculateCountdown()
   } catch (e) {
     console.error('首页数据加载失败:', e)
+  }
+}
+
+/**
+ * 加载首页科目列表（含用户已做题数）
+ */
+async function loadSubjectList(): Promise<void> {
+  try {
+    const list = await examApi.getSubjectList(examStore.currentCategoryId)
+    subjectList.value = list
+  } catch {
+    // 静默失败，回退使用 examStore.subjects
+    console.warn('加载科目列表失败，使用缓存数据')
   }
 }
 
