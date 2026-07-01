@@ -47,6 +47,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
                 .addPathPatterns("/wx/**")
                 .excludePathPatterns(
                         "/wx/auth/login",         // 小程序登录排除拦截
+                        "/wx/auth/register",      // 小程序注册排除拦截
                         "/wx/exam/categories",    // 分类列表（首页未登录可访问）
                         "/wx/exam/subjects",      // 科目列表（首页未登录可访问）
                         "/wx/question/subject/*/stats",  // 科目统计（首页未登录可访问）

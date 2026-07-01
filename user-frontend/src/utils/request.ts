@@ -55,7 +55,13 @@ function hideLoading(): void {
  */
 function buildUrl(url: string, params?: Record<string, unknown>): string {
   const baseURL = API.BASE_URL
-  const fullUrl = url.startsWith('http') ? url : baseURL + url
+  // 业务接口统一加 /wx 前缀（后端小程序路由为 /wx/auth、/wx/user 等）
+  // 已是完整URL或已带/wx前缀的路径不重复处理
+  let normalizedUrl = url
+  if (!url.startsWith('http') && !url.startsWith('/wx') && !url.startsWith('wx')) {
+    normalizedUrl = '/wx' + (url.startsWith('/') ? url : '/' + url)
+  }
+  const fullUrl = url.startsWith('http') ? url : baseURL + normalizedUrl
 
   if (!params || Object.keys(params).length === 0) return fullUrl
 

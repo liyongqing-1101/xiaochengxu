@@ -42,6 +42,7 @@ public class WxJwtAuthFilter implements HandlerInterceptor {
 
         // 白名单：公开接口直接放行
         if (requestURI.contains("/wx/auth/login")
+                || requestURI.contains("/wx/auth/register")
                 || requestURI.contains("/wx/exam/categories")
                 || requestURI.contains("/wx/exam/subjects")
                 || requestURI.matches(".*/wx/question/subject/\\d+/stats.*")
