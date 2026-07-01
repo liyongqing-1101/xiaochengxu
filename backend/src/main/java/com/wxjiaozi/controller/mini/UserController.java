@@ -90,7 +90,7 @@ public class UserController {
             String token = authHeader.substring(7);
             userService.logout(token);
         }
-        return Result.ok();
+        return Result.ok("退出成功", null);
     }
 
     @PutMapping("/updateNickname")

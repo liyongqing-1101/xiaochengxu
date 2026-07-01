@@ -17,10 +17,15 @@
 
     <!-- 用户信息卡片 -->
     <view class="profile-user-card">
-      <view class="profile-user-card__top" @tap="handleEditProfile">
+      <view class="profile-user-card__top">
         <image class="profile-user-card__avatar" :src="userStore.avatar" mode="aspectFill" />
         <view class="profile-user-card__info">
-          <text class="profile-user-card__name">{{ userStore.nickname }}</text>
+          <view class="profile-user-card__name-row">
+            <text class="profile-user-card__name">{{ userStore.nickname }}</text>
+            <view class="profile-user-card__edit" @tap.stop="handleEditProfile">
+              <text class="profile-user-card__edit-icon">✎</text>
+            </view>
+          </view>
           <view class="profile-user-card__membership">
             <text class="profile-user-card__vip-text">{{ userStore.isVip ? 'VIP会员' : '免费用户' }}</text>
           </view>
@@ -100,7 +105,7 @@
 
     <!-- 退出登录（原生按钮） -->
     <view class="profile-logout">
-      <view class="logout-btn" @tap="handleLogout">
+      <view class="logout-btn" @tap="openLogoutModal">
         <text class="logout-btn__text">退出登录</text>
       </view>
     </view>
@@ -119,7 +124,7 @@
     <view v-if="editPopupVisible" class="edit-mask" @tap="closeEditPopup">
       <view class="edit-dialog" @tap.stop>
         <view class="edit-dialog__header">
-          <text class="edit-dialog__title">编辑个人信息</text>
+          <text class="edit-dialog__title">编辑昵称</text>
         </view>
         <view class="edit-dialog__body">
           <view class="edit-dialog__field">
@@ -144,6 +149,26 @@
             @tap="handleSaveProfile"
           >
             <text>保存</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 退出登录确认弹窗（居中模态，复刻截图样式） -->
+    <view v-if="logoutModalVisible" class="logout-mask" @tap="closeLogoutModal">
+      <view class="logout-dialog" @tap.stop>
+        <view class="logout-dialog__header">
+          <text class="logout-dialog__title">提示</text>
+        </view>
+        <view class="logout-dialog__body">
+          <text class="logout-dialog__content">确定要退出登录吗？</text>
+        </view>
+        <view class="logout-dialog__footer">
+          <view class="logout-dialog__btn logout-dialog__btn--cancel" @tap="closeLogoutModal">
+            <text>取消</text>
+          </view>
+          <view class="logout-dialog__btn logout-dialog__btn--confirm" @tap="confirmLogout">
+            <text>确定</text>
           </view>
         </view>
       </view>
@@ -175,6 +200,9 @@ const editPopupVisible = ref(false)
 const editForm = reactive({
   nickname: ''
 })
+
+// 退出登录确认弹窗状态
+const logoutModalVisible = ref(false)
 
 // 保存按钮可用：非空且去空格后非空
 const canSave = computed(
@@ -283,40 +311,47 @@ async function handleSaveProfile(): Promise<void> {
 }
 
 /**
- * 退出登录（二次确认）
+ * 打开退出登录确认弹窗
  */
-function handleLogout(): void {
-  console.log('[Profile] 点击退出登录，弹出二次确认')
-  uni.showModal({
-    title: '退出登录',
-    content: '确认退出当前账号？退出后需要重新登录',
-    confirmText: '确认退出',
-    cancelText: '再想想',
-    confirmColor: '#ee0a24',
-    success: async (res) => {
-      if (!res.confirm) {
-        console.log('[Profile] 用户取消退出登录')
-        return
-      }
-      console.log('[Profile] 用户确认退出登录')
-      uni.showLoading({ title: '退出中...', mask: true })
-      try {
-        // 调用store的logout方法（会调用后端接口将token加黑名单，并清除本地状态）
-        await userStore.logout()
-        uni.hideLoading()
-        uni.showToast({ title: '已退出登录', icon: 'success' })
-        // 跳转到首页
-        setTimeout(() => {
-          uni.reLaunch({ url: '/pages/index/index' })
-        }, 500)
-      } catch (err) {
-        console.error('[Profile] 退出登录异常:', err)
-        uni.hideLoading()
-        // store.logout 内部已 try/finally 保证清除本地状态，此处兜底直接跳首页
-        uni.reLaunch({ url: '/pages/index/index' })
-      }
-    },
-  })
+function openLogoutModal(): void {
+  console.log('[Profile] 打开退出登录确认弹窗')
+  logoutModalVisible.value = true
+}
+
+/**
+ * 关闭退出登录确认弹窗（取消）
+ */
+function closeLogoutModal(): void {
+  console.log('[Profile] 取消退出登录')
+  logoutModalVisible.value = false
+}
+
+/**
+ * 确认退出登录（执行整套登出流程）
+ * 1. 调用后端 POST /api/wx/user/logout
+ * 2. 接口正常返回后清除本地token
+ * 3. 重定向到首页tab
+ * 4. 网络异常时Toast提示，不清token不跳转
+ */
+async function confirmLogout(): Promise<void> {
+  console.log('[Profile] 确认退出登录，调用登出接口')
+  uni.showLoading({ title: '退出中...', mask: true })
+  try {
+    // 调用store.logout: 成功会调后端接口+清除本地token；网络异常会抛出
+    await userStore.logout()
+    uni.hideLoading()
+    console.log('[Profile] 登出成功，重定向首页')
+    uni.showToast({ title: '已退出登录', icon: 'success' })
+    // 重定向到小程序首页tab
+    setTimeout(() => {
+      uni.reLaunch({ url: '/pages/index/index' })
+    }, 500)
+  } catch (err) {
+    console.error('[Profile] 登出网络异常:', err)
+    uni.hideLoading()
+    // 网络异常: 不清token不跳转, 仅提示
+    uni.showToast({ title: '网络异常，请检查网络连接', icon: 'none' })
+  }
 }
 
 /**
@@ -387,11 +422,30 @@ onShow(() => {
   flex: 1;
 }
 
+.profile-user-card__name-row {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+}
+
 .profile-user-card__name {
   font-size: $font-size-lg;
   font-weight: $font-weight-semibold;
   color: $color-text-primary;
   display: block;
+}
+
+.profile-user-card__edit {
+  width: 40rpx;
+  height: 40rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.profile-user-card__edit-icon {
+  font-size: 32rpx;
+  color: $color-primary;
 }
 
 .profile-user-card__membership {
@@ -629,5 +683,75 @@ onShow(() => {
 .edit-dialog__btn--disabled {
   background: #c9cdd4;
   color: #86909c;
+}
+
+// 退出登录确认弹窗（居中模态，复刻截图样式）
+.logout-mask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.logout-dialog {
+  width: 560rpx;
+  background: $color-bg-white;
+  border-radius: $radius-md;
+  overflow: hidden;
+}
+
+.logout-dialog__header {
+  padding: $spacing-lg $spacing-md $spacing-sm;
+  text-align: center;
+}
+
+.logout-dialog__title {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+}
+
+.logout-dialog__body {
+  padding: 0 $spacing-md $spacing-lg;
+  text-align: center;
+}
+
+.logout-dialog__content {
+  font-size: $font-size-base;
+  color: $color-text-primary;
+  line-height: 1.6;
+}
+
+.logout-dialog__footer {
+  display: flex;
+  border-top: 1rpx solid $color-border-light;
+}
+
+.logout-dialog__btn {
+  flex: 1;
+  height: 96rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: $font-size-base;
+
+  text {
+    font-size: $font-size-base;
+  }
+}
+
+.logout-dialog__btn--cancel {
+  color: $color-text-secondary;
+  border-right: 1rpx solid $color-border-light;
+}
+
+.logout-dialog__btn--confirm {
+  color: $color-primary;
 }
 </style>

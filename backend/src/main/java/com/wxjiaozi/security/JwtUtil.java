@@ -100,6 +100,19 @@ public class JwtUtil {
     }
 
     /**
+     * Extract the expiration Date from a JWT token.
+     * Returns null if the token is invalid or cannot be parsed.
+     */
+    public Date getExpirationDateFromToken(String token) {
+        try {
+            Claims claims = extractAllClaims(token);
+            return claims.getExpiration();
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /**
      * Get the signing key derived from the configured secret.
      */
     private SecretKey getSigningKey() {

@@ -33,6 +33,7 @@ import org.springframework.web.client.RestTemplate;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -357,21 +358,30 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public void logout(String token) {
+        String blacklistKey = TOKEN_BLACKLIST_PREFIX + token;
         try {
-            // 解析Token获取过期时间
+            // 解析Token获取用户ID与过期时间
             Long userId = jwtUtil.getUserIdFromToken(token);
+            Date expiration = jwtUtil.getExpirationDateFromToken(token);
             log.info("用户退出登录: userId={}", userId);
 
-            // 将Token加入黑名单，设置过期时间与Token本身一致（7天）
-            String blacklistKey = TOKEN_BLACKLIST_PREFIX + token;
-            // 7天 = 7 * 24 * 60 * 60 秒
-            stringRedisTemplate.opsForValue().set(blacklistKey, "1", 7, TimeUnit.DAYS);
+            // 黑名单过期时间与JWT剩余有效期保持一致
+            long remainingMillis = expiration != null
+                    ? expiration.getTime() - System.currentTimeMillis()
+                    : -1;
 
-            log.info("Token已加入黑名单: userId={}", userId);
+            if (remainingMillis > 0) {
+                stringRedisTemplate.opsForValue().set(blacklistKey, "1",
+                        remainingMillis, TimeUnit.MILLISECONDS);
+                log.info("Token已加入黑名单: userId={}, 剩余有效={}ms", userId, remainingMillis);
+            } else {
+                // token已过期或解析异常，兜底用配置的小程序有效期(7天)兜底，防止无效token被滥用
+                stringRedisTemplate.opsForValue().set(blacklistKey, "1", 7, TimeUnit.DAYS);
+                log.info("Token已加入黑名单(兜底7天): userId={}", userId);
+            }
         } catch (Exception e) {
             log.warn("Token解析失败，直接加入黑名单: {}", e.getMessage());
             // 即使解析失败也加入黑名单，防止无效Token被滥用
-            String blacklistKey = TOKEN_BLACKLIST_PREFIX + token;
             stringRedisTemplate.opsForValue().set(blacklistKey, "1", 7, TimeUnit.DAYS);
         }
     }

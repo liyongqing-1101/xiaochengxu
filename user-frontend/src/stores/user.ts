@@ -186,27 +186,31 @@ export const useUserStore = defineStore('user', () => {
 
   /**
    * 登出
+   * 成功：调用后端logout接口 → 清除本地登录态
+   * 网络异常：抛出错误，不清除本地token（由调用方提示用户）
    */
   async function logout(): Promise<void> {
     console.log('[Store] 开始退出登录流程')
-    try {
-      // 调用后端logout接口，将token加入黑名单
-      await userApi.logout()
-      console.log('[Store] 后端登出接口调用成功')
-    } catch (err) {
-      console.warn('[Store] 后端登出接口调用失败，本地强制清除:', err)
-    } finally {
-      // 无论接口调用成功与否，都清除本地登录状态
-      token.value = null
-      userInfo.value = null
-      stats.value = null
+    // 调用后端logout接口，将token加入黑名单
+    await userApi.logout()
+    console.log('[Store] 后端登出接口调用成功')
+    // 接口正常返回后才清除本地登录态
+    clearAuth()
+  }
 
-      // 清除本地存储中的认证信息
-      storage.remove(StorageKey.TOKEN)
-      storage.remove(StorageKey.USER_INFO)
-      storage.remove(StorageKey.REFRESH_TOKEN)
-      console.log('[Store] 本地登录态已清除')
-    }
+  /**
+   * 仅清除本地登录态（不调用后端）
+   */
+  function clearAuth(): void {
+    token.value = null
+    userInfo.value = null
+    stats.value = null
+
+    // 清除本地存储中的认证信息
+    storage.remove(StorageKey.TOKEN)
+    storage.remove(StorageKey.USER_INFO)
+    storage.remove(StorageKey.REFRESH_TOKEN)
+    console.log('[Store] 本地登录态已清除')
   }
 
   /**
@@ -248,6 +252,7 @@ export const useUserStore = defineStore('user', () => {
     fetchStats,
     checkIn,
     logout,
+    clearAuth,
     updateProfile,
   }
 })
