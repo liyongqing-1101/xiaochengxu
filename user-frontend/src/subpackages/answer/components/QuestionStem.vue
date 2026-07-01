@@ -8,9 +8,10 @@
       </text>
     </view>
 
-    <!-- 题干内容 -->
+    <!-- 题干内容：HTML用rich-text，纯文本用text -->
     <view class="question-stem__content">
-      <rich-text :nodes="stem" />
+      <rich-text v-if="isHtml" :nodes="stem" />
+      <text v-else class="question-stem__text">{{ stem }}</text>
     </view>
   </view>
 </template>
@@ -26,6 +27,9 @@ const props = defineProps<{
 }>()
 
 const typeMeta = computed(() => QUESTION_TYPE_CONFIG[props.questionType])
+
+/** 判断题干是否为HTML */
+const isHtml = computed(() => /<[a-zA-Z][^>]*>/.test(props.stem || ''))
 </script>
 
 <style lang="scss" scoped>
@@ -54,6 +58,12 @@ const typeMeta = computed(() => QUESTION_TYPE_CONFIG[props.questionType])
     color: $color-text-primary;
     line-height: $line-height-loose;
     letter-spacing: 0.5px;
+  }
+
+  &__text {
+    font-size: $font-size-md;
+    color: $color-text-primary;
+    line-height: $line-height-loose;
   }
 }
 </style>

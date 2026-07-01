@@ -22,9 +22,6 @@
 
     <!-- ===== 顶部信息栏 ===== -->
     <view class="answer-topbar">
-      <!-- 倒计时 -->
-      <QuestionTimer :display="timerDisplay" :remaining="timerRemaining" />
-
       <!-- 进度 -->
       <view class="answer-topbar__progress">
         <text class="answer-topbar__progress-text">{{ currentNumber }} / {{ totalCount }}</text>
@@ -165,17 +162,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useQuestionStore } from '@/stores/question'
 import { useExamStore } from '@/stores/exam'
-import { useTimer } from '@/composables/useTimer'
 import type { SubmitResult } from '@/types/question'
 import { CategoryId } from '@/types/enums'
-import { TIMER } from '@/utils/constants'
 import AppNavbar from '@components/common/AppNavbar.vue'
 import AppEmpty from '@components/common/AppEmpty.vue'
 import QuestionStem from '../components/QuestionStem.vue'
-import QuestionTimer from '../components/QuestionTimer.vue'
 import SingleChoice from '../components/SingleChoice.vue'
 import MultiChoice from '../components/MultiChoice.vue'
 import TrueFalse from '../components/TrueFalse.vue'
@@ -197,16 +191,6 @@ const trueFalseOptions = [
   { key: 'true', value: '正确' },
   { key: 'false', value: '错误' },
 ]
-
-// 随机模式 30 分钟，其他模式 45 分钟
-const RANDOM_EXAM_SECONDS = 30 * 60
-
-// 计时器
-const { display: timerDisplay, remaining: timerRemaining, start: startTimer, stop: stopTimer, reset: resetTimer } =
-  useTimer(TIMER.COUNTDOWN_SECONDS, () => {
-    uni.showToast({ title: '答题时间到', icon: 'none' })
-    handleEndSession()
-  })
 
 // 当前模式
 const currentMode = ref('practice')
@@ -260,22 +244,11 @@ onMounted(async () => {
 
     const subject = examStore.subjects.find(s => s.id === Number(subjectId))
     subjectName.value = subject?.name || '答题'
-
-    // 随机模式使用 30 分钟倒计时，其他模式 45 分钟
-    const timerSeconds = currentMode.value === 'random' ? RANDOM_EXAM_SECONDS : TIMER.COUNTDOWN_SECONDS
-    resetTimer(timerSeconds)
-    startTimer()
   } catch (e) {
     console.error('加载答题会话失败:', e)
   } finally {
     loading.value = false
   }
-})
-
-onUnmounted(() => {
-  stopTimer()
-  // 保存答题进度
-  questionStore.saveProgressToLocal()
 })
 
 // ═══════════════════════════════════════
@@ -348,7 +321,6 @@ async function handleCollect(): Promise<void> {
 /** 结束答题 */
 async function handleEndSession(): Promise<void> {
   await questionStore.endSession()
-  stopTimer()
 
   const { correct, total } = questionStore.progress
 
