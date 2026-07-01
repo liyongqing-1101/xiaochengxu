@@ -1,88 +1,43 @@
 package com.wxjiaozi.service.impl;
 
-import cn.hutool.core.util.StrUtil;
-import cn.hutool.crypto.digest.BCrypt;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.wxjiaozi.common.BusinessException;
 import com.wxjiaozi.common.PageResult;
-import com.wxjiaozi.dto.admin.AdminLoginResultDTO;
 import com.wxjiaozi.dto.admin.QuestionSaveDTO;
-import com.wxjiaozi.entity.AdminUser;
 import com.wxjiaozi.entity.ExamCategory;
 import com.wxjiaozi.entity.ExamChapter;
 import com.wxjiaozi.entity.ExamQuestion;
 import com.wxjiaozi.entity.ExamSubject;
 import com.wxjiaozi.entity.ExamTag;
-import com.wxjiaozi.mapper.AdminUserMapper;
 import com.wxjiaozi.mapper.ExamCategoryMapper;
 import com.wxjiaozi.mapper.ExamChapterMapper;
 import com.wxjiaozi.mapper.ExamQuestionMapper;
 import com.wxjiaozi.mapper.ExamSubjectMapper;
 import com.wxjiaozi.mapper.ExamTagMapper;
-import com.wxjiaozi.security.JwtUtil;
 import com.wxjiaozi.service.AdminService;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class AdminServiceImpl implements AdminService {
 
-    private final AdminUserMapper adminUserMapper;
     private final ExamQuestionMapper examQuestionMapper;
     private final ExamCategoryMapper examCategoryMapper;
     private final ExamSubjectMapper examSubjectMapper;
     private final ExamChapterMapper examChapterMapper;
     private final ExamTagMapper examTagMapper;
-    private final JwtUtil jwtUtil;
-    private final ObjectMapper objectMapper;
 
-    public AdminServiceImpl(AdminUserMapper adminUserMapper,
-                            ExamQuestionMapper examQuestionMapper,
-                            ExamCategoryMapper examCategoryMapper,
-                            ExamSubjectMapper examSubjectMapper,
-                            ExamChapterMapper examChapterMapper,
-                            ExamTagMapper examTagMapper,
-                            JwtUtil jwtUtil,
-                            ObjectMapper objectMapper) {
-        this.adminUserMapper = adminUserMapper;
-        this.examQuestionMapper = examQuestionMapper;
-        this.examCategoryMapper = examCategoryMapper;
-        this.examSubjectMapper = examSubjectMapper;
-        this.examChapterMapper = examChapterMapper;
-        this.examTagMapper = examTagMapper;
-        this.jwtUtil = jwtUtil;
-        this.objectMapper = objectMapper;
-    }
+    // 注意：登录逻辑已移至 AdminAuthController 直接实现
+    // 管理后台改用 HttpSession + BCrypt，不再使用 JWT + Redis
 
     @Override
-    public AdminLoginResultDTO login(String username, String password) {
-        AdminUser adminUser = adminUserMapper.selectByUsername(username);
-        if (adminUser == null) {
-            throw new BusinessException("用户名或密码错误");
-        }
-
-        if (adminUser.getStatus() != null && adminUser.getStatus() != 1) {
-            throw new BusinessException("账号已被禁用");
-        }
-
-        if (!BCrypt.checkpw(password, adminUser.getPassword())) {
-            throw new BusinessException("用户名或密码错误");
-        }
-
-        String token = jwtUtil.generateToken(adminUser.getId(), null, "ADMIN");
-
-        AdminLoginResultDTO result = new AdminLoginResultDTO();
-        result.setToken(token);
-        result.setNickname(adminUser.getNickname());
-        result.setRole(adminUser.getRole() != null ? adminUser.getRole() : "admin");
-        return result;
+    public ExamQuestion getQuestionById(Long id) {
+        return examQuestionMapper.selectById(id);
     }
 
     @Override
@@ -91,77 +46,114 @@ public class AdminServiceImpl implements AdminService {
                                                     int page, int pageSize) {
         int offset = (page - 1) * pageSize;
         List<ExamQuestion> records = examQuestionMapper.selectPageWithFilters(
-                offset, pageSize, subjectId, type, status, keyword
-        );
+                offset, pageSize, subjectId, type, status, keyword);
         Long total = examQuestionMapper.countWithFilters(subjectId, type, status, keyword);
         return new PageResult<>(records, total, page, pageSize);
     }
 
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public ExamQuestion saveQuestion(QuestionSaveDTO dto) {
-        ExamQuestion question;
-        if (dto.getId() != null) {
-            question = examQuestionMapper.selectById(dto.getId());
-            if (question == null) {
-                throw new BusinessException("题目不存在");
-            }
-        } else {
-            question = new ExamQuestion();
-        }
+        try {
+            // 参数校验
+            validateQuestionDTO(dto);
 
-        question.setSubjectId(dto.getSubjectId());
-        question.setType(dto.getType());
-        question.setStem(dto.getStem());
-        question.setStatus(dto.getStatus() != null ? dto.getStatus() : 1);
+            ExamQuestion question;
+            Long oldSubjectId = null;
 
-        // 答案存储：单选存字母，多选存逗号分隔，判断存true/false
-        String answer = dto.getAnswer();
-        if (StrUtil.isNotBlank(answer)) {
-            String trimmed = answer.trim();
-            // 判断题特殊处理
-            if ("true".equalsIgnoreCase(trimmed) || "false".equalsIgnoreCase(trimmed)) {
-                answer = trimmed.toLowerCase();
-            } else if (trimmed.contains(",")) {
-                // 多选：多个字母逗号分隔，统一转大写
-                String[] parts = trimmed.split(",");
-                List<String> partsList = new ArrayList<>();
-                for (String part : parts) {
-                    String trimmedPart = part.trim().toUpperCase();
-                    if (!trimmedPart.isEmpty()) {
-                        partsList.add(trimmedPart);
-                    }
+            if (dto.getId() != null) {
+                // 编辑模式
+                question = examQuestionMapper.selectById(dto.getId());
+                if (question == null) {
+                    throw new BusinessException("题目不存在");
                 }
-                answer = String.join(",", partsList);
+                oldSubjectId = question.getSubjectId();
             } else {
-                // 单选：单个字母
-                answer = trimmed.toUpperCase();
+                // 新增模式
+                question = new ExamQuestion();
+                question.setStatus(dto.getStatus() != null ? dto.getStatus() : 1);
             }
-        }
-        question.setAnswer(answer);
-        question.setExplanation(dto.getExplanation());
-        // optionList 使用新的JSON格式（由DTO处理，此处简化）
-        if (dto.getOptionList() != null && !dto.getOptionList().isEmpty()) {
-            question.setOptionList(dto.getOptionList());
-        }
 
-        if (dto.getId() != null) {
-            examQuestionMapper.updateById(question);
-        } else {
-            examQuestionMapper.insert(question);
-        }
+            // 设置基本字段
+            question.setSubjectId(dto.getSubjectId());
+            question.setType(dto.getType());
+            question.setStem(dto.getStem());
+            question.setAnswer(dto.getAnswer());
+            question.setExplanation(dto.getExplanation());
 
-        return question;
+            // 处理选项：判断题optionList设为null
+            if (dto.getType() == 3) {
+                question.setOptionList(null);
+            } else {
+                question.setOptionList(dto.getOptionList());
+            }
+
+            // 执行保存
+            if (dto.getId() != null) {
+                examQuestionMapper.updateById(question);
+                // 如果科目变更，更新两个科目的计数
+                if (oldSubjectId != null && !oldSubjectId.equals(dto.getSubjectId())) {
+                    examSubjectMapper.decrementQuestionCount(oldSubjectId);
+                    examSubjectMapper.incrementQuestionCount(dto.getSubjectId());
+                }
+            } else {
+                examQuestionMapper.insert(question);
+                // 新增题目，科目计数+1
+                examSubjectMapper.incrementQuestionCount(dto.getSubjectId());
+            }
+
+            return question;
+        } catch (BusinessException e) {
+            log.warn("保存题目业务异常: {}", e.getMessage());
+            throw e;
+        } catch (Exception e) {
+            log.error("保存题目系统异常", e);
+            throw new BusinessException("保存失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 校验题目参数
+     */
+    private void validateQuestionDTO(QuestionSaveDTO dto) {
+        if (dto.getSubjectId() == null) {
+            throw new BusinessException("请选择所属科目");
+        }
+        if (dto.getType() == null || dto.getType() < 1 || dto.getType() > 3) {
+            throw new BusinessException("题型参数错误，应为1(单选)/2(多选)/3(判断)");
+        }
+        if (dto.getStem() == null || dto.getStem().trim().isEmpty()) {
+            throw new BusinessException("题干不能为空");
+        }
+        if (dto.getAnswer() == null || dto.getAnswer().trim().isEmpty()) {
+            throw new BusinessException("正确答案不能为空");
+        }
+        // 单选/多选必须有选项
+        if (dto.getType() != 3 && (dto.getOptionList() == null || dto.getOptionList().isEmpty())) {
+            throw new BusinessException("选择题的选项不能为空");
+        }
     }
 
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public void deleteQuestion(Long id) {
-        ExamQuestion question = examQuestionMapper.selectById(id);
-        if (question == null) {
-            throw new BusinessException("题目不存在");
+        try {
+            ExamQuestion question = examQuestionMapper.selectById(id);
+            if (question == null) {
+                throw new BusinessException("题目不存在");
+            }
+            examQuestionMapper.deleteById(id);
+            // 删除题目，科目计数-1
+            if (question.getSubjectId() != null) {
+                examSubjectMapper.decrementQuestionCount(question.getSubjectId());
+            }
+        } catch (BusinessException e) {
+            log.warn("删除题目业务异常: {}", e.getMessage());
+            throw e;
+        } catch (Exception e) {
+            log.error("删除题目系统异常", e);
+            throw new BusinessException("删除失败: " + e.getMessage());
         }
-        examQuestionMapper.deleteById(id);
     }
 
     @Override

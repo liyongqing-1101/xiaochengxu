@@ -27,44 +27,8 @@ import java.util.TimeZone;
  *
  * @author wxjiaozi
  */
-@Configuration
+// 暂时禁用 JacksonConfig，使用默认配置
+// @Configuration
 public class JacksonConfig {
 
-    @Bean
-    @Primary
-    public ObjectMapper objectMapper(Jackson2ObjectMapperBuilder builder) {
-        ObjectMapper objectMapper = builder.createXmlMapper(false).build();
-
-        // ============================================================
-        // 1. 字符编码设置（核心：强制UTF-8，防止中文乱码）
-        // ============================================================
-        // 确保所有 JSON 序列化/反序列化都使用 UTF-8 编码
-        // 配合 spring.http.encoding.charset=UTF-8 全局生效
-
-        // ============================================================
-        // 2. 日期格式化配置
-        // ============================================================
-        // 统一日期格式，避免 Date/LocalDateTime 序列化异常
-        objectMapper.setDateFormat(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss"));
-        // 设置为中国时区，确保时间字段正确
-        objectMapper.setTimeZone(TimeZone.getTimeZone("Asia/Shanghai"));
-
-        // ============================================================
-        // 3. 容错配置（防止异常中断请求）
-        // ============================================================
-        // JSON 中包含未知属性时不抛出异常（兼容前端多余字段）
-        objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-        // 空对象序列化时不抛异常（如 new Object()）
-        objectMapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
-        // 日期不以时间戳格式输出
-        objectMapper.configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false);
-
-        // ============================================================
-        // 4. Java 8 时间类型支持（LocalDateTime/LocalDate等）
-        // ============================================================
-        JavaTimeModule javaTimeModule = new JavaTimeModule();
-        objectMapper.registerModule(javaTimeModule);
-
-        return objectMapper;
-    }
 }

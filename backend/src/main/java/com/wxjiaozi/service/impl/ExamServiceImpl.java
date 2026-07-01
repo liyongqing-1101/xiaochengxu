@@ -10,7 +10,6 @@ import com.wxjiaozi.mapper.ExamSubjectMapper;
 import com.wxjiaozi.mapper.ExamTagMapper;
 import com.wxjiaozi.service.ExamService;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -35,7 +34,6 @@ public class ExamServiceImpl implements ExamService {
     }
 
     @Override
-    @Cacheable(value = "categories", key = "'all'", unless = "#result == null || #result.isEmpty()")
     public List<ExamCategory> getCategories() {
         List<ExamCategory> categories = examCategoryMapper.selectAll();
         for (ExamCategory category : categories) {

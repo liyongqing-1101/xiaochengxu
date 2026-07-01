@@ -5,6 +5,7 @@ import com.wxjiaozi.common.PageResult;
 import com.wxjiaozi.dto.mini.DailyQuestionDTO;
 import com.wxjiaozi.dto.mini.QuestionDTO;
 import com.wxjiaozi.dto.mini.SubjectStatsDTO;
+import com.wxjiaozi.util.OptionListConverter;
 import com.wxjiaozi.entity.ExamQuestion;
 import com.wxjiaozi.entity.UserCollection;
 import com.wxjiaozi.mapper.ExamQuestionMapper;
@@ -171,7 +172,7 @@ public class QuestionServiceImpl implements QuestionService {
         dto.setSubjectId(q.getSubjectId());
         dto.setType(q.getType());
         dto.setStem(q.getStem());
-        dto.setOptionList(q.getOptionList());
+        dto.setOptionList(OptionListConverter.toDTOList(q.getOptionList()));
         dto.setAnswer(q.getAnswer());
         dto.setExplanation(q.getExplanation());
         dto.setStatus(q.getStatus());

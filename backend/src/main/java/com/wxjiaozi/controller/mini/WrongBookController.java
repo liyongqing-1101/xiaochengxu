@@ -24,7 +24,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/wrong-book")
+@RequestMapping("/wx/wrong-book")
 @Tag(name = "小程序-错题本")
 @RequiredArgsConstructor
 public class WrongBookController {

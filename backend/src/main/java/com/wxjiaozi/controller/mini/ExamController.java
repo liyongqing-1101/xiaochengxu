@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@RequestMapping("/exam")
+@RequestMapping("/wx/exam")
 @Tag(name = "小程序-考试分类")
 @RequiredArgsConstructor
 public class ExamController {

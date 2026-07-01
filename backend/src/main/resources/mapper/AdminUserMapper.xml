@@ -27,7 +27,7 @@
     <select id="selectByUsername" resultMap="BaseResultMap">
         SELECT <include refid="Base_Column_List"/>
         FROM admin_user
-        WHERE username = #{username}
+        WHERE username = #{username, javaType=String, jdbcType=VARCHAR}
     </select>
 
     <select id="selectAll" resultMap="BaseResultMap">

@@ -1,7 +1,6 @@
 package com.wxjiaozi.service;
 
 import com.wxjiaozi.common.PageResult;
-import com.wxjiaozi.dto.admin.AdminLoginResultDTO;
 import com.wxjiaozi.dto.admin.QuestionSaveDTO;
 import com.wxjiaozi.entity.ExamCategory;
 import com.wxjiaozi.entity.ExamQuestion;
@@ -10,7 +9,7 @@ import java.util.List;
 
 public interface AdminService {
 
-    AdminLoginResultDTO login(String username, String password);
+    ExamQuestion getQuestionById(Long id);
 
     PageResult<ExamQuestion> queryQuestions(Long categoryId, Long subjectId, Long chapterId, Long tagId,
                                             Integer type, Integer difficulty, Integer status, String keyword,

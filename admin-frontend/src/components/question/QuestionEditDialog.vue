@@ -1,17 +1,20 @@
 <template>
   <el-dialog
-    :model-value="visible"
+    v-model="dialogVisible"
     :title="question?.id ? '编辑题目' : '新增题目'"
-    width="860px"
+    width="800px"
     destroy-on-close
-    @close="$emit('update:visible', false)"
+    @close="emit('close')"
   >
-    <el-form ref="formRef" :model="form" :rules="rules" label-width="80px" class="question-form">
+    <el-form ref="formRef" :model="form" :rules="rules" label-width="80px">
       <el-row :gutter="16">
         <el-col :span="12">
           <el-form-item label="所属科目" prop="subjectId">
-            <el-select v-model="form.subjectId" placeholder="选择科目" style="width:100%">
-              <el-option v-for="s in subjects" :key="s.id" :label="s.name" :value="s.id" />
+            <el-select v-model="form.subjectId" placeholder="选择科目" style="width: 100%">
+              <el-option label="高等教育学" :value="1" />
+              <el-option label="高等教育法规" :value="2" />
+              <el-option label="教师伦理学" :value="3" />
+              <el-option label="大学心理学" :value="4" />
             </el-select>
           </el-form-item>
         </el-col>
@@ -27,42 +30,28 @@
       </el-row>
 
       <el-form-item label="题干" prop="stem">
-        <div class="editor-wrapper">
-          <QuillEditor
-            v-model:content="form.stem"
-            contentType="html"
-            theme="snow"
-            toolbar="full"
-            :style="{ minHeight: '120px' }"
-          />
-        </div>
+        <el-input
+          v-model="form.stem"
+          type="textarea"
+          :rows="3"
+          placeholder="请输入题干内容"
+        />
       </el-form-item>
 
+      <!-- 选项区域：只有单选/多选显示 -->
       <template v-if="form.type !== 3">
-        <el-row :gutter="16">
-          <el-col :span="12">
-            <el-form-item label="选项A" prop="optionA">
-              <el-input v-model="form.optionA" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="选项B" prop="optionB">
-              <el-input v-model="form.optionB" />
-            </el-form-item>
-          </el-col>
-        </el-row>
-        <el-row :gutter="16">
-          <el-col :span="12">
-            <el-form-item label="选项C">
-              <el-input v-model="form.optionC" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="选项D">
-              <el-input v-model="form.optionD" />
-            </el-form-item>
-          </el-col>
-        </el-row>
+        <el-form-item label="选项A" prop="optionA">
+          <el-input v-model="form.optionA" placeholder="选项A内容" />
+        </el-form-item>
+        <el-form-item label="选项B" prop="optionB">
+          <el-input v-model="form.optionB" placeholder="选项B内容" />
+        </el-form-item>
+        <el-form-item label="选项C" prop="optionC">
+          <el-input v-model="form.optionC" placeholder="选项C内容" />
+        </el-form-item>
+        <el-form-item label="选项D" prop="optionD">
+          <el-input v-model="form.optionD" placeholder="选项D内容" />
+        </el-form-item>
       </template>
 
       <el-form-item label="正确答案" prop="answer">
@@ -81,6 +70,9 @@
             <el-checkbox value="C">C</el-checkbox>
             <el-checkbox value="D">D</el-checkbox>
           </el-checkbox-group>
+          <div style="color: #909399; font-size: 12px; margin-top: 8px">
+            提示：按住Ctrl可多选，答案顺序按字母排序
+          </div>
         </template>
         <template v-else>
           <el-radio-group v-model="form.answer">
@@ -91,27 +83,15 @@
       </el-form-item>
 
       <el-form-item label="解析">
-        <div class="editor-wrapper">
-          <QuillEditor
-            v-model:content="form.explanation"
-            contentType="html"
-            theme="snow"
-            toolbar="full"
-            :style="{ minHeight: '100px' }"
-          />
-        </div>
+        <el-input
+          v-model="form.explanation"
+          type="textarea"
+          :rows="2"
+          placeholder="请输入答案解析（选填）"
+        />
       </el-form-item>
 
       <el-row :gutter="16">
-        <el-col :span="12">
-          <el-form-item label="难度">
-            <el-radio-group v-model="form.difficulty">
-              <el-radio :value="1">简单</el-radio>
-              <el-radio :value="2">中等</el-radio>
-              <el-radio :value="3">困难</el-radio>
-            </el-radio-group>
-          </el-form-item>
-        </el-col>
         <el-col :span="12">
           <el-form-item label="状态">
             <el-switch v-model="form.status" :active-value="1" :inactive-value="0" active-text="上架" inactive-text="下架" />
@@ -121,41 +101,39 @@
     </el-form>
 
     <template #footer>
-      <el-button @click="$emit('update:visible', false)">取消</el-button>
+      <el-button @click="emit('close')">取消</el-button>
       <el-button type="primary" :loading="saving" @click="handleSave">保存</el-button>
     </template>
   </el-dialog>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, watch, computed, onMounted } from 'vue'
-import { QuillEditor } from '@vueup/vue-quill'
-import '@vueup/vue-quill/dist/vue-quill.snow.css'
-import { useQuestionStore } from '@/stores/question'
-import { categoryApi } from '@/api/modules/category'
-import type { Subject } from '@/types/category'
-import type { Question } from '@/types/question'
-import type { FormInstance, FormRules } from 'element-plus'
+import { ref, reactive, computed, watch } from 'vue'
+import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
+import { questionApi } from '@/api/modules/question'
+import type { ExamQuestion } from '@/types/question'
 
 const props = defineProps<{
   visible: boolean
-  question: Question | null
+  question: ExamQuestion | null
 }>()
 
 const emit = defineEmits<{
-  'update:visible': [value: boolean]
-  saved: []
+  (e: 'close'): void
+  (e: 'success'): void
 }>()
 
-const store = useQuestionStore()
 const formRef = ref<FormInstance>()
 const saving = ref(false)
-const subjects = ref<Subject[]>([])
 const answerMulti = ref<string[]>([])
+
+const dialogVisible = computed({
+  get: () => props.visible,
+  set: (val) => !val && emit('close'),
+})
 
 const defaultForm = () => ({
   id: undefined as number | undefined,
-  categoryId: 1,
   subjectId: undefined as number | undefined,
   type: 1,
   stem: '',
@@ -165,7 +143,6 @@ const defaultForm = () => ({
   optionD: '',
   answer: '',
   explanation: '',
-  difficulty: 2,
   status: 1,
 })
 
@@ -177,82 +154,94 @@ const rules: FormRules = {
   answer: [{ required: true, message: '请选择正确答案', trigger: 'change' }],
 }
 
-watch(() => props.visible, (val) => {
-  if (val) {
-    if (props.question) {
-      const q = props.question
+// 监听题目变化，填充表单
+watch(
+  () => props.question,
+  (q) => {
+    if (q) {
       form.id = q.id
-      form.categoryId = q.categoryId
       form.subjectId = q.subjectId
       form.type = q.type
       form.stem = q.stem
-      form.optionA = q.optionA || ''
-      form.optionB = q.optionB || ''
-      form.optionC = q.optionC || ''
-      form.optionD = q.optionD || ''
       form.explanation = q.explanation || ''
-      form.difficulty = q.difficulty
       form.status = q.status
-      // Parse answer JSON
-      try {
-        const arr = JSON.parse(q.answer)
-        if (form.type === 2) {
-          answerMulti.value = arr
-        } else {
-          form.answer = arr[0] || ''
-        }
-      } catch {
-        form.answer = q.answer
+
+      // 解析optionList到各选项
+      if (q.optionList && Array.isArray(q.optionList)) {
+        form.optionA = q.optionList[0] || ''
+        form.optionB = q.optionList[1] || ''
+        form.optionC = q.optionList[2] || ''
+        form.optionD = q.optionList[3] || ''
+      } else {
+        form.optionA = ''
+        form.optionB = ''
+        form.optionC = ''
+        form.optionD = ''
+      }
+
+      // 解析答案
+      if (q.type === 2 && q.answer) {
+        answerMulti.value = q.answer.split(',').filter((a: string) => a)
+      } else {
+        form.answer = q.answer || ''
       }
     } else {
+      // 新增：重置
       Object.assign(form, defaultForm())
       answerMulti.value = []
     }
-  }
-})
+  },
+  { immediate: true }
+)
 
+// 题型变化时重置答案
 function handleTypeChange() {
   form.answer = ''
   answerMulti.value = []
 }
 
-function handleSave() {
-  formRef.value?.validate(async (valid) => {
-    if (!valid) return
-    saving.value = true
-    try {
-      // Build answer JSON
-      let answerJson: string
-      if (form.type === 2) {
-        answerJson = JSON.stringify(answerMulti.value)
-      } else {
-        answerJson = JSON.stringify([form.answer])
-      }
-      await store.saveQuestion({ ...form, answer: answerJson })
-      emit('saved')
-    } finally {
-      saving.value = false
-    }
-  })
-}
+// 保存
+async function handleSave() {
+  const valid = await formRef.value?.validate().catch(() => false)
+  if (!valid) return
 
-onMounted(async () => {
+  saving.value = true
   try {
-    const tree = await categoryApi.getTree()
-    if (tree && tree.length > 0 && tree[0].subjects) {
-      subjects.value = tree[0].subjects
+    // 构建optionList
+    let optionList: string[] | null = null
+    if (form.type !== 3) {
+      optionList = []
+      if (form.optionA) optionList.push(form.optionA)
+      if (form.optionB) optionList.push(form.optionB)
+      if (form.optionC) optionList.push(form.optionC)
+      if (form.optionD) optionList.push(form.optionD)
     }
-  } catch { /* ignore */ }
-})
+
+    // 构建答案（多选时用逗号分隔）
+    let answer = form.type === 2 ? answerMulti.value.sort().join(',') : form.answer
+
+    await questionApi.save({
+      id: form.id,
+      subjectId: form.subjectId,
+      type: form.type,
+      stem: form.stem,
+      optionList,
+      answer,
+      explanation: form.explanation,
+      status: form.status,
+    })
+
+    ElMessage.success('保存成功')
+    emit('success')
+    emit('close')
+  } catch (e: any) {
+    ElMessage.error(e?.message || '保存失败')
+  } finally {
+    saving.value = false
+  }
+}
 </script>
 
-<style scoped lang="scss">
-.question-form {
-  max-height: 65vh;
-  overflow-y: auto;
-  padding-right: 8px;
-}
-.editor-wrapper {
-  width: 100%;
-}
+<style scoped>
+/* 可根据需要添加样式 */
 </style>

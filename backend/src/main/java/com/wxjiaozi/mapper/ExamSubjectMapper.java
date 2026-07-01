@@ -23,4 +23,14 @@ public interface ExamSubjectMapper {
     int updateById(ExamSubject subject);
 
     int deleteById(@Param("id") Long id);
+
+    /**
+     * 科目题目计数+1
+     */
+    int incrementQuestionCount(@Param("subjectId") Long subjectId);
+
+    /**
+     * 科目题目计数-1
+     */
+    int decrementQuestionCount(@Param("subjectId") Long subjectId);
 }

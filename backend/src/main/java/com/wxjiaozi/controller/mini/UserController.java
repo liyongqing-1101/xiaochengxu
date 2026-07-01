@@ -22,7 +22,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/user")
+@RequestMapping("/wx/user")
 @Tag(name = "小程序-用户")
 @RequiredArgsConstructor
 public class UserController {

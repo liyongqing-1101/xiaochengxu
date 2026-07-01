@@ -332,9 +332,10 @@ onMounted(() => {
 
 onShow(() => {
   userStore.restoreSession()
-  if (!userStore.isLoggedIn) {
-    uni.reLaunch({ url: '/pages/login/index' })
-  }
+  // 暂时禁用强制登录，方便测试
+  // if (!userStore.isLoggedIn) {
+  //   uni.reLaunch({ url: '/pages/login/index' })
+  // }
 })
 </script>
 

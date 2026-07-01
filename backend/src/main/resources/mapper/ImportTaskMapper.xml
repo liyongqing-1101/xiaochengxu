@@ -76,7 +76,7 @@
         SELECT <include refid="Base_Column_List"/>
         FROM import_task
         ORDER BY created_at DESC
-        LIMIT #{offset}, #{limit}
+        LIMIT #{offset, javaType=int, jdbcType=INTEGER}, #{limit, javaType=int, jdbcType=INTEGER}
     </select>
 
     <select id="countAll" resultType="java.lang.Long">

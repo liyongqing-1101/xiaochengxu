@@ -36,7 +36,7 @@
         FROM user_wrong_question
         WHERE user_id = #{userId}
         ORDER BY updated_at DESC
-        LIMIT #{offset}, #{pageSize}
+        LIMIT #{offset, javaType=int, jdbcType=INTEGER}, #{pageSize, javaType=int, jdbcType=INTEGER}
     </select>
 
     <select id="countByUserId" resultType="java.lang.Long">

@@ -30,7 +30,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/question")
+@RequestMapping("/wx/question")
 @Tag(name = "小程序-题目")
 @RequiredArgsConstructor
 public class QuestionController {

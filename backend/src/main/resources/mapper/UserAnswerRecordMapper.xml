@@ -53,7 +53,7 @@
         WHERE user_id = #{userId}
         GROUP BY session_id
         ORDER BY MAX(created_at) DESC
-        LIMIT #{offset}, #{pageSize}
+        LIMIT #{offset, javaType=int, jdbcType=INTEGER}, #{pageSize, javaType=int, jdbcType=INTEGER}
     </select>
 
     <select id="countByUserId" resultType="java.lang.Long">

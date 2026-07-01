@@ -4,16 +4,17 @@
 <mapper namespace="com.wxjiaozi.mapper.ExamQuestionMapper">
 
     <!-- ============================================================ -->
-    <!-- ResultMap：包含 JSON 字段 optionList 的类型处理器 -->
+    <!-- ResultMap：包含JSON字段option_list的类型处理器 -->
+    <!-- 仅保留表中实际存在的字段 -->
     <!-- ============================================================ -->
     <resultMap id="ExamQuestionResultMap" type="com.wxjiaozi.entity.ExamQuestion">
         <id column="id" property="id"/>
         <result column="subject_id" property="subjectId"/>
         <result column="type" property="type"/>
         <result column="stem" property="stem"/>
-        <!-- JSON 字段：使用自定义类型处理器 -->
+        <!-- JSON字段：选项数组 -->
         <result column="option_list" property="optionList"
-                typeHandler="com.wxjiaozi.handler.QuestionOptionListTypeHandler"/>
+                typeHandler="com.wxjiaozi.handler.JsonTypeHandler"/>
         <result column="answer" property="answer"/>
         <result column="explanation" property="explanation"/>
         <result column="status" property="status"/>
@@ -22,7 +23,7 @@
     </resultMap>
 
     <!-- ============================================================ -->
-    <!-- 基础列：用于 SELECT 子句复用 -->
+    <!-- 基础列：仅查询实际存在字段 -->
     <!-- ============================================================ -->
     <sql id="Base_Column_List">
         id, subject_id, type, stem, option_list, answer, explanation, status, created_at, updated_at
@@ -34,31 +35,32 @@
     <select id="selectById" resultMap="ExamQuestionResultMap">
         SELECT <include refid="Base_Column_List"/>
         FROM exam_question
-        WHERE id = #{id}
+        WHERE id = #{id, javaType=Long, jdbcType=BIGINT}
     </select>
 
     <!-- ============================================================ -->
-    <!-- 2. 分页查询题目列表（支持多条件筛选） -->
+    <!-- 2. 分页查询题目列表（简化筛选条件） -->
+    <!-- 仅保留：科目ID、题型、状态、关键词 -->
     <!-- ============================================================ -->
     <select id="selectPageWithFilters" resultMap="ExamQuestionResultMap">
         SELECT <include refid="Base_Column_List"/>
         FROM exam_question
         <where>
             <if test="subjectId != null">
-                AND subject_id = #{subjectId}
+                AND subject_id = #{subjectId, javaType=Long, jdbcType=BIGINT}
             </if>
             <if test="type != null">
-                AND type = #{type}
+                AND type = #{type, javaType=Integer, jdbcType=INTEGER}
             </if>
             <if test="status != null">
-                AND status = #{status}
+                AND status = #{status, javaType=Integer, jdbcType=INTEGER}
             </if>
             <if test="keyword != null and keyword != ''">
-                AND stem LIKE CONCAT('%', #{keyword}, '%')
+                AND stem LIKE CONCAT('%', #{keyword, javaType=String, jdbcType=VARCHAR}, '%')
             </if>
         </where>
         ORDER BY id DESC
-        LIMIT #{offset}, #{limit}
+        LIMIT #{offset, javaType=int, jdbcType=INTEGER}, #{limit, javaType=int, jdbcType=INTEGER}
     </select>
 
     <!-- ============================================================ -->
@@ -69,52 +71,23 @@
         FROM exam_question
         <where>
             <if test="subjectId != null">
-                AND subject_id = #{subjectId}
+                AND subject_id = #{subjectId, javaType=Long, jdbcType=BIGINT}
             </if>
             <if test="type != null">
-                AND type = #{type}
+                AND type = #{type, javaType=Integer, jdbcType=INTEGER}
             </if>
             <if test="status != null">
-                AND status = #{status}
+                AND status = #{status, javaType=Integer, jdbcType=INTEGER}
             </if>
             <if test="keyword != null and keyword != ''">
-                AND stem LIKE CONCAT('%', #{keyword}, '%')
+                AND stem LIKE CONCAT('%', #{keyword, javaType=String, jdbcType=VARCHAR}, '%')
             </if>
         </where>
     </select>
 
     <!-- ============================================================ -->
-    <!-- 4. 按科目和题型统计题量（过滤禁用状态 status=0） -->
-    <!-- ============================================================ -->
-    <select id="countBySubjectAndType" resultType="java.util.HashMap">
-        SELECT
-            type,
-            COUNT(*) AS count
-        FROM exam_question
-        WHERE subject_id = #{subjectId}
-          AND status = 1
-        GROUP BY type
-    </select>
-
-    <!-- ============================================================ -->
-    <!-- 5. 随机抽题：按科目+题型随机抽取指定数量的题目 -->
-    <!-- 使用 ORDER BY RAND() 实现真正随机抽题 -->
-    <!-- ============================================================ -->
-    <select id="selectRandomBySubjectAndType" resultMap="ExamQuestionResultMap">
-        SELECT <include refid="Base_Column_List"/>
-        FROM exam_question
-        WHERE subject_id = #{subjectId}
-          AND status = 1
-          <if test="type != null">
-              AND type = #{type}
-          </if>
-        ORDER BY RAND()
-        LIMIT #{limit}
-    </select>
-
-    <!-- ============================================================ -->
-    <!-- 6. 插入新题目 -->
-    <!-- JSON 字段 option_list 使用类型处理器自动转换 -->
+    <!-- 4. 插入单条题目（简化字段） -->
+    <!-- 判断题自动将option_list设为NULL，避免JSON序列化空值问题 -->
     <!-- ============================================================ -->
     <insert id="insert" parameterType="com.wxjiaozi.entity.ExamQuestion" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO exam_question (
@@ -128,20 +101,25 @@
             created_at,
             updated_at
         ) VALUES (
-            #{subjectId},
-            #{type},
-            #{stem},
-            #{optionList, typeHandler=com.wxjiaozi.handler.QuestionOptionListTypeHandler},
-            #{answer},
-            #{explanation},
-            #{status, jdbcType=INTEGER},
+            #{subjectId, javaType=Long, jdbcType=BIGINT},
+            #{type, javaType=Integer, jdbcType=INTEGER},
+            #{stem, javaType=String, jdbcType=VARCHAR},
+            <choose>
+                <when test="type == 3">NULL</when>
+                <when test="optionList == null or optionList.size() == 0">NULL</when>
+                <otherwise>#{optionList, typeHandler=com.wxjiaozi.handler.JsonTypeHandler, jdbcType=VARCHAR}</otherwise>
+            </choose>,
+            #{answer, javaType=String, jdbcType=VARCHAR},
+            #{explanation, javaType=String, jdbcType=VARCHAR},
+            #{status, javaType=Integer, jdbcType=INTEGER},
             NOW(),
             NOW()
         )
     </insert>
 
     <!-- ============================================================ -->
-    <!-- 7. 批量插入题目（Excel导入使用） -->
+    <!-- 5. 批量插入题目（Excel导入专用，简化字段） -->
+    <!-- 判断题自动将option_list设为NULL -->
     <!-- ============================================================ -->
     <insert id="batchInsert" parameterType="java.util.List">
         INSERT INTO exam_question (
@@ -157,13 +135,17 @@
         ) VALUES
         <foreach collection="list" item="item" separator=",">
             (
-                #{item.subjectId},
-                #{item.type},
-                #{item.stem},
-                #{item.optionList, typeHandler=com.wxjiaozi.handler.QuestionOptionListTypeHandler},
-                #{item.answer},
-                #{item.explanation},
-                #{item.status, jdbcType=INTEGER},
+                #{item.subjectId, javaType=Long, jdbcType=BIGINT},
+                #{item.type, javaType=Integer, jdbcType=INTEGER},
+                #{item.stem, javaType=String, jdbcType=VARCHAR},
+                <!-- 判断题option_list自动设为NULL -->
+                <choose>
+                    <when test="item.type == 3">NULL</when>
+                    <otherwise>#{item.optionList, typeHandler=com.wxjiaozi.handler.JsonTypeHandler}</otherwise>
+                </choose>,
+                #{item.answer, javaType=String, jdbcType=VARCHAR},
+                #{item.explanation, javaType=String, jdbcType=VARCHAR},
+                1,
                 NOW(),
                 NOW()
             )
@@ -171,45 +153,60 @@
     </insert>
 
     <!-- ============================================================ -->
-    <!-- 8. 更新题目 -->
+    <!-- 6. 更新题目（简化字段） -->
+    <!-- 判断题自动将option_list设为NULL，避免JSON序列化空值问题 -->
     <!-- ============================================================ -->
     <update id="updateById" parameterType="com.wxjiaozi.entity.ExamQuestion">
         UPDATE exam_question
         <set>
-            <if test="subjectId != null">subject_id = #{subjectId},</if>
-            <if test="type != null">type = #{type},</if>
-            <if test="stem != null">stem = #{stem},</if>
-            <if test="optionList != null">
-                option_list = #{optionList, typeHandler=com.wxjiaozi.handler.QuestionOptionListTypeHandler},
+            <if test="subjectId != null">subject_id = #{subjectId, javaType=Long, jdbcType=BIGINT},</if>
+            <if test="type != null">type = #{type, javaType=Integer, jdbcType=INTEGER},</if>
+            <if test="stem != null">stem = #{stem, javaType=String, jdbcType=VARCHAR},</if>
+            <if test="type == 3">option_list = NULL,</if>
+            <if test="type != 3 and optionList != null and optionList.size() > 0">
+                option_list = #{optionList, typeHandler=com.wxjiaozi.handler.JsonTypeHandler, jdbcType=VARCHAR},
             </if>
-            <if test="answer != null">answer = #{answer},</if>
-            <if test="explanation != null">explanation = #{explanation},</if>
-            <if test="status != null">status = #{status},</if>
+            <if test="answer != null">answer = #{answer, javaType=String, jdbcType=VARCHAR},</if>
+            <if test="explanation != null">explanation = #{explanation, javaType=String, jdbcType=VARCHAR},</if>
+            <if test="status != null">status = #{status, javaType=Integer, jdbcType=INTEGER},</if>
             updated_at = NOW()
         </set>
-        WHERE id = #{id}
+        WHERE id = #{id, javaType=Long, jdbcType=BIGINT}
     </update>
 
     <!-- ============================================================ -->
-    <!-- 9. 根据ID删除题目 -->
+    <!-- 7. 删除题目 -->
     <!-- ============================================================ -->
     <delete id="deleteById">
-        DELETE FROM exam_question WHERE id = #{id}
+        DELETE FROM exam_question
+        WHERE id = #{id, javaType=Long, jdbcType=BIGINT}
     </delete>
 
     <!-- ============================================================ -->
-    <!-- 10. 批量删除题目 -->
+    <!-- 8. 批量删除题目 -->
     <!-- ============================================================ -->
     <delete id="batchDeleteByIds">
         DELETE FROM exam_question
         WHERE id IN
         <foreach collection="ids" item="id" open="(" separator="," close=")">
-            #{id}
+            #{id, javaType=Long, jdbcType=BIGINT}
         </foreach>
     </delete>
 
     <!-- ============================================================ -->
-    <!-- 11. 查询所有正常状态的题目 -->
+    <!-- 9. 批量查询题目 -->
+    <!-- ============================================================ -->
+    <select id="selectByIds" resultMap="ExamQuestionResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM exam_question
+        WHERE id IN
+        <foreach collection="ids" item="id" open="(" separator="," close=")">
+            #{id, javaType=Long, jdbcType=BIGINT}
+        </foreach>
+    </select>
+
+    <!-- ============================================================ -->
+    <!-- 10. 查询所有激活题目 -->
     <!-- ============================================================ -->
     <select id="selectAllActive" resultMap="ExamQuestionResultMap">
         SELECT <include refid="Base_Column_List"/>
@@ -219,7 +216,19 @@
     </select>
 
     <!-- ============================================================ -->
-    <!-- 12. 根据偏移量查询单条题目（用于每日一题） -->
+    <!-- 11. 按科目和题型统计题量（小程序首页显示） -->
+    <!-- ============================================================ -->
+    <select id="countBySubjectAndType" resultType="java.util.Map">
+        SELECT type, COUNT(*) as count
+        FROM exam_question
+        WHERE subject_id = #{subjectId}
+          AND status = 1
+        GROUP BY type
+        ORDER BY type
+    </select>
+
+    <!-- ============================================================ -->
+    <!-- 12. 根据偏移量查询单条题目（每日一题） -->
     <!-- ============================================================ -->
     <select id="selectByOffset" resultMap="ExamQuestionResultMap">
         SELECT <include refid="Base_Column_List"/>
@@ -230,33 +239,36 @@
     </select>
 
     <!-- ============================================================ -->
-    <!-- 13. 查询所有题目（仅返回题干用于去重） -->
+    <!-- 13. 按科目和题型随机抽题 -->
+    <!-- ============================================================ -->
+    <select id="selectRandomBySubjectAndType" resultMap="ExamQuestionResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM exam_question
+        WHERE subject_id = #{subjectId}
+          AND status = 1
+          <if test="type != null">
+              AND type = #{type}
+          </if>
+        ORDER BY RAND()
+        LIMIT #{limit}
+    </select>
+
+    <!-- ============================================================ -->
+    <!-- 14. 查询所有题目用于去重（仅返回必要字段） -->
     <!-- ============================================================ -->
     <select id="selectAllForDeduplication" resultMap="ExamQuestionResultMap">
-        SELECT stem
+        SELECT id, stem
         FROM exam_question
     </select>
 
     <!-- ============================================================ -->
-    <!-- 14. 统计指定科目和状态的题目数量 -->
+    <!-- 15. 统计指定科目和状态的题目数量 -->
     <!-- ============================================================ -->
     <select id="countBySubjectAndStatus" resultType="java.lang.Long">
         SELECT COUNT(*)
         FROM exam_question
         WHERE subject_id = #{subjectId}
           AND status = #{status}
-    </select>
-
-    <!-- ============================================================ -->
-    <!-- 15. 根据ID列表批量查询题目 -->
-    <!-- ============================================================ -->
-    <select id="selectByIds" resultMap="ExamQuestionResultMap">
-        SELECT <include refid="Base_Column_List"/>
-        FROM exam_question
-        WHERE id IN
-        <foreach collection="ids" item="id" open="(" separator="," close=")">
-            #{id}
-        </foreach>
     </select>
 
 </mapper>

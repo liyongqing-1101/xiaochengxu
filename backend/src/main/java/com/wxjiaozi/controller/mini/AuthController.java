@@ -21,7 +21,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/auth")
+@RequestMapping("/wx/auth")
 @Tag(name = "小程序-认证")
 @RequiredArgsConstructor
 public class AuthController {

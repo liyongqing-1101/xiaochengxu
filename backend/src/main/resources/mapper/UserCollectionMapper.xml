@@ -31,7 +31,7 @@
         FROM user_collection
         WHERE user_id = #{userId}
         ORDER BY created_at DESC
-        LIMIT #{offset}, #{pageSize}
+        LIMIT #{offset, javaType=int, jdbcType=INTEGER}, #{pageSize, javaType=int, jdbcType=INTEGER}
     </select>
 
     <select id="countByUserId" resultType="java.lang.Long">

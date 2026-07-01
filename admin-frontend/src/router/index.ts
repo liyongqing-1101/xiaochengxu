@@ -41,9 +41,13 @@ const router = createRouter({
 })
 
 router.beforeEach((to, _from, next) => {
-  const token = localStorage.getItem('admin_token')
-  if (to.path !== '/login' && !token) {
+  // Session模式：检查用户信息是否存在（admin_nickname）
+  const nickname = localStorage.getItem('admin_nickname')
+  if (to.path !== '/login' && !nickname) {
     next('/login')
+  } else if (to.path === '/login' && nickname) {
+    // 已登录用户访问登录页，跳转到首页
+    next('/question')
   } else {
     next()
   }

@@ -1,12 +1,15 @@
 package com.wxjiaozi.dto.admin;
 
-import com.wxjiaozi.dto.QuestionOptionDTO;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 import java.util.List;
 
+/**
+ * 题目保存DTO（简化版）
+ * 移除难度、章节、知识点相关字段
+ */
 @Data
 public class QuestionSaveDTO {
 
@@ -23,9 +26,9 @@ public class QuestionSaveDTO {
 
     /**
      * 题目选项数组（JSON格式，单选/多选题使用，判断题为null）
-     * 格式：[{"key":"A","value":"选项内容"},{"key":"E","value":"选项内容"}]
+     * 简化格式：["选项A内容","选项B内容","选项C内容","选项D内容"]
      */
-    private List<QuestionOptionDTO> optionList;
+    private List<String> optionList;
 
     @NotBlank(message = "答案不能为空")
     private String answer;

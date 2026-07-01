@@ -1,14 +1,27 @@
-import { post } from '../request'
-import type { ApiResponse } from '@/types/api'
+import { post, get } from '../request'
 
 export interface AdminLoginResult {
-  token: string
   nickname: string
   role: string
+  sessionId: string
+}
+
+export interface AdminCheckResult {
+  nickname: string
+  role: string
+  username: string
 }
 
 export const authApi = {
   login(username: string, password: string): Promise<AdminLoginResult> {
     return post<AdminLoginResult>('/admin/auth/login', { username, password })
+  },
+
+  checkLogin(): Promise<AdminCheckResult> {
+    return get<AdminCheckResult>('/admin/auth/check')
+  },
+
+  logout(): Promise<void> {
+    return post<void>('/admin/auth/logout')
   },
 }

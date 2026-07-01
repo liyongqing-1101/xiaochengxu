@@ -5,6 +5,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.wxjiaozi.common.BusinessException;
+import com.wxjiaozi.util.OptionListConverter;
 import com.wxjiaozi.dto.mini.EndSessionDTO;
 import com.wxjiaozi.dto.mini.QuestionDTO;
 import com.wxjiaozi.dto.mini.QuestionSessionDTO;
@@ -305,7 +306,7 @@ public class PracticeServiceImpl implements PracticeService {
         dto.setSubjectId(q.getSubjectId());
         dto.setType(q.getType());
         dto.setStem(q.getStem());
-        dto.setOptionList(q.getOptionList());
+        dto.setOptionList(OptionListConverter.toDTOList(q.getOptionList()));
         dto.setAnswer(q.getAnswer());
         dto.setExplanation(q.getExplanation());
         dto.setStatus(q.getStatus());
