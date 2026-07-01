@@ -353,6 +353,7 @@ onMounted(() => {
 
 onShow(() => {
   userStore.restoreSession()
+  loadPageData()  // TabBar切换回首页时重新加载数据
   // 暂时禁用强制登录，方便测试
   // if (!userStore.isLoggedIn) {
   //   uni.reLaunch({ url: '/pages/login/index' })
